@@ -1,0 +1,43 @@
+.custom-cursor {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  will-change: transform;
+}
+
+.custom-cursor.visible {
+  opacity: 0.5;
+}
+
+.cursor-letter {
+  font-family: var(--font-family-serif);
+  font-size: 18px;
+  color: var(--color-primary);
+  font-weight: 400;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  line-height: 1;
+}
+
+/* Hide custom cursor on mobile */
+@media (max-width: 768px) {
+  .custom-cursor {
+    display: none !important;
+  }
+}
+
+/* Ensure text selection works */
+* {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+button,
+a {
+  user-select: none;
+  -webkit-user-select: none;
+}

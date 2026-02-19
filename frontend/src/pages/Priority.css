@@ -1,0 +1,111 @@
+.priority {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+  animation: var(--fade-in);
+}
+
+.priority-title {
+  font-family: var(--font-family-serif);
+  font-size: var(--font-size-3xl);
+  font-weight: 400;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-md);
+  letter-spacing: -0.02em;
+  line-height: var(--line-height-tight);
+}
+
+.priority-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-2xl);
+  line-height: var(--line-height-relaxed);
+}
+
+.priority-contacts {
+  background-color: var(--color-surface-warm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-2xl);
+  text-align: left;
+}
+
+.priority-contacts h3 {
+  font-family: var(--font-family-serif);
+  font-size: var(--font-size-xl);
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+}
+
+.contact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.contact-list li {
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  line-height: var(--line-height-relaxed);
+}
+
+.contact-list li:last-child {
+  border-bottom: none;
+}
+
+.contact-list strong {
+  color: var(--color-primary);
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+}
+
+.contact-note {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--spacing-xs);
+  font-style: italic;
+}
+
+.priority-whatsapp {
+  margin-bottom: var(--spacing-2xl);
+}
+
+.priority-whatsapp p {
+  font-size: var(--font-size-base);
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-md);
+}
+
+.priority-actions {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .priority-title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .priority-subtitle {
+    font-size: var(--font-size-sm);
+  }
+
+  .priority-contacts {
+    padding: var(--spacing-lg);
+  }
+
+  .contact-list li {
+    padding: var(--spacing-sm) 0;
+  }
+
+  .contact-list strong {
+    font-size: var(--font-size-base);
+  }
+}

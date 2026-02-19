@@ -1,0 +1,16 @@
+.calm-container {
+    width: 100%;
+    padding: 0 var(--spacing-md);
+}
+
+@media (min-width: 769px) {
+    .calm-container {
+        padding: 0 var(--spacing-xl);
+    }
+}
+
+@media (max-width: 480px) {
+    .calm-container {
+        padding: 0 var(--spacing-sm);
+    }
+}

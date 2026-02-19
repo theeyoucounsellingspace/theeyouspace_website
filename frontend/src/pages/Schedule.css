@@ -1,0 +1,183 @@
+.schedule {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--spacing-md) var(--spacing-md);
+  padding-top: calc(var(--spacing-lg) + 50px);
+  animation: var(--fade-in);
+  position: relative;
+  min-height: 60vh;
+}
+
+.schedule-back {
+  position: fixed;
+  top: var(--spacing-md);
+  left: var(--spacing-md);
+  z-index: 100;
+  background-color: rgba(253, 251, 247, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 50px;
+}
+
+.schedule-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.schedule-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.schedule-subtitle {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/* Loading / error / empty states */
+.schedule-loading,
+.schedule-error,
+.schedule-empty {
+  text-align: center;
+  padding: var(--spacing-2xl);
+  color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.error-message {
+  color: var(--color-error, #c0392b);
+  font-size: var(--text-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-left: 3px solid var(--color-error, #c0392b);
+  text-align: left;
+}
+
+/* ─── Professionals grouped layout ─────────────── */
+
+.schedule-professionals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xl);
+}
+
+.professional-group {
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e8e0d5);
+  border-radius: 16px;
+  padding: var(--spacing-lg);
+  transition: box-shadow 0.25s ease;
+}
+
+.professional-group:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+/* Professional header row */
+.professional-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border, #e8e0d5);
+}
+
+.professional-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-primary, #8b7355);
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.professional-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.professional-name {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  margin: 0;
+}
+
+.professional-slots-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Slot cards grid */
+.schedule-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.schedule-slot {
+  cursor: pointer;
+  text-align: center;
+  padding: var(--spacing-md);
+  border-radius: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.schedule-slot:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.schedule-slot.selected {
+  background: var(--color-primary, #8b7355);
+  color: white;
+  border-color: var(--color-primary, #8b7355);
+}
+
+.slot-date {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.schedule-slot.selected .slot-date {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.slot-time {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.schedule-slot.selected .slot-time {
+  color: white;
+}
+
+/* ─── Mobile ─────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .schedule {
+    padding-top: calc(var(--spacing-md) + 50px);
+  }
+
+  .schedule-slots {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .professional-name {
+    font-size: var(--text-base);
+  }
+}
