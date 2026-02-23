@@ -253,3 +253,100 @@
     font-size: var(--font-size-sm);
   }
 }
+
+/* ── First-timer toggle ─────────────────────────────────── */
+
+.first-timer-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--color-primary-subtle);
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 12px;
+  cursor: pointer;
+  margin-bottom: var(--spacing-lg);
+  transition: border-color 0.2s;
+}
+
+.first-timer-toggle:hover {
+  border-color: var(--color-primary-light);
+}
+
+.first-timer-toggle input[type="checkbox"] {
+  margin-top: 2px;
+  accent-color: var(--color-primary);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.first-timer-toggle span {
+  font-size: 0.95rem;
+  color: var(--color-text-light);
+  line-height: 1.55;
+}
+
+/* ── Terms & Conditions section ─────────────────────────── */
+
+.tc-section {
+  margin: var(--spacing-xl) 0 var(--spacing-lg);
+  padding: var(--spacing-lg);
+  background: var(--color-background-warm);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+
+.tc-title {
+  font-family: var(--font-family-serif);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-md);
+}
+
+.tc-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.tc-scroll:focus {
+  outline: 2px solid var(--color-primary-light);
+}
+
+.tc-text {
+  font-family: var(--font-family-sans);
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.tc-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.tc-consent input[type="checkbox"] {
+  margin-top: 3px;
+  accent-color: var(--color-primary);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.tc-consent span {
+  font-size: 0.9rem;
+  color: var(--color-text-light);
+  line-height: 1.6;
+}

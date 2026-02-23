@@ -1,107 +1,138 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import Button from '../components/Button'
-import CalmContainer from '../components/CalmContainer'
 import { ROUTES } from '../utils/constants'
 import './About.css'
 
-const TEAM_MEMBERS = [
-    {
-        name: 'Mohammed Muhaiyadeen M',
-        title: 'Counseling Psychologist',
-        specialization: 'CBT, Person-Centered Therapy, and Couple Counselling',
-        focus: 'Supports clients with relationships, academics, and professional growth, focusing on clarity, balance, and sustainable change.',
-    },
-    {
-        name: 'Leasker Paulraj DJ',
-        title: 'Counseling Psychologist',
-        specialization: 'CBT, Person-Centered Therapy, and Family Counselling',
-        focus: 'Works with family concerns, coping with disability, and general stress through structured, compassionate care.',
-    },
-    {
-        name: 'Jeevan KJ',
-        title: 'Counseling Psychologist',
-        specialization: 'School Counseling and Career Guidance',
-        focus: 'Uses person-centered support and strengths-based career mapping to help individuals build confidence and direction.',
-    },
-    {
-        name: 'Abijith KB',
-        title: 'Counseling Psychologist',
-        specialization: 'CBT and Person-Centered Therapy',
-        focus: 'Supports working professionals and students in navigating academic and professional challenges with clarity and purpose.',
-    },
-]
+const WHATSAPP = import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/917358154022'
+const EMAIL = import.meta.env.VITE_CONTACT_EMAIL || 'theeyoucounsellingspace@gmail.com'
+const PHONE = '+91 73581 54022'
 
 function About() {
     const navigate = useNavigate()
 
     return (
-        <CalmContainer>
-            <div className="about">
-                <div className="about-header">
-                    <h2 className="about-title">About Thee You Space</h2>
+        <div className="about-page">
+
+            {/* Back */}
+            <button className="about-back" onClick={() => navigate(ROUTES.HOME)} aria-label="Back to home">
+                ←
+            </button>
+
+            {/* ── Hero section ───────────────────────────────── */}
+            <section className="about-hero">
+                <h1 className="about-heading">Sometimes, life gets heavy.</h1>
+                <p className="about-lead">
+                    Emotions become difficult to name. Relationships feel strained.
+                    The pressure of daily responsibilities leaves little room to pause and breathe.
+                    Thee You Space exists for exactly those moments — to offer a space that is
+                    safe, structured, and genuinely supportive.
+                </p>
+            </section>
+
+            {/* ── Who we are ─────────────────────────────────── */}
+            <section className="about-section">
+                <h2 className="about-section-title">Who we are</h2>
+                <p className="about-body">
+                    We are a collective of Counseling Psychologists with postgraduate training in
+                    Applied Psychology, founded by{' '}
+                    <strong>Mohammed Muhaiyadeen M</strong>,{' '}
+                    <strong>Abijith KB</strong>,{' '}
+                    <strong>Jeevan KJ</strong>, and{' '}
+                    <strong>Leaskar Paulraj DJ</strong> — four colleagues who graduated together
+                    and chose to build something meaningful with what they learned.
+                </p>
+                <p className="about-body">
+                    Our practice is built on a simple but firm belief: every person, regardless
+                    of age, background, or circumstance, deserves access to ethical and empathetic
+                    psychological support.
+                </p>
+            </section>
+
+            {/* ── What we believe ────────────────────────────── */}
+            <section className="about-section about-section--belief">
+                <blockquote className="about-quote">
+                    "Therapy, at its core, is not about correcting who you are.
+                    It is about understanding where you are — and finding, at your own pace,
+                    where you would like to be."
+                </blockquote>
+                <p className="about-body">
+                    We integrate evidence-based therapeutic frameworks with genuine human presence.
+                    Every session is guided by professional integrity, confidentiality, and deep
+                    respect for your individual experience. You will not be judged here. You will be heard.
+                </p>
+            </section>
+
+            {/* ── Who we support ─────────────────────────────── */}
+            <section className="about-section">
+                <h2 className="about-section-title">Who we support</h2>
+                <ul className="about-support-list">
+                    <li>School students navigating academic and emotional challenges</li>
+                    <li>Persons with disabilities</li>
+                    <li>Working professionals managing stress and burnout</li>
+                    <li>Families working through complex dynamics</li>
+                    <li>Anyone who simply needs a safe place to talk</li>
+                </ul>
+                <p className="about-body">
+                    Whatever brings you here, we meet you where you are.
+                </p>
+            </section>
+
+            {/* ── Our commitment ─────────────────────────────── */}
+            <section className="about-section">
+                <h2 className="about-section-title">Our commitment to you</h2>
+                <p className="about-body">
+                    At Thee You Space, your wellbeing is not a problem to be solved — it is a
+                    journey to be supported. We provide a confidential, professionally governed
+                    environment where growth happens gradually, meaningfully, and on your terms.
+                </p>
+                <p className="about-body about-tagline">
+                    When you are ready, we are here.
+                </p>
+            </section>
+
+            {/* ── Contact ────────────────────────────────────── */}
+            <section className="about-section about-contact">
+                <h2 className="about-section-title">Get in touch</h2>
+                <p className="about-body">
+                    For queries, feedback, or general support — we're reachable through any of
+                    the following:
+                </p>
+                <div className="contact-items">
+                    <a className="contact-item" href={`tel:${PHONE.replace(/\s/g, '')}`}>
+                        <span className="contact-icon" aria-hidden="true">📞</span>
+                        <span>{PHONE}</span>
+                    </a>
+                    <a className="contact-item" href={`mailto:${EMAIL}`}>
+                        <span className="contact-icon" aria-hidden="true">✉️</span>
+                        <span>{EMAIL}</span>
+                    </a>
+                    <a className="contact-item" href={WHATSAPP} target="_blank" rel="noopener noreferrer">
+                        <span className="contact-icon" aria-hidden="true">💬</span>
+                        <span>Chat on WhatsApp</span>
+                    </a>
                 </div>
+            </section>
 
-                <div className="about-content">
-                    <p className="about-intro">
-                        Thee You Space is a collective of trained Counseling Psychologists committed to providing compassionate, evidence-based mental health care.
-                    </p>
+            {/* ── Disclaimer ─────────────────────────────────── */}
+            <section className="about-disclaimer">
+                <p>
+                    <strong>Professional service notice:</strong> Sessions at Thee You Space are provided
+                    voluntarily by you and conducted by trained Counseling Psychologists. This is an
+                    outpatient counselling service and is <strong>not a substitute for emergency psychiatric
+                        care</strong>. If you or someone you know is in immediate danger, please contact a
+                    national helpline (iCall: <a href="tel:9152987821">9152987821</a>) or visit
+                    your nearest emergency room.
+                </p>
+            </section>
 
-                    <p className="about-text">
-                        Founded by four friends who graduated with a Master's degree in Applied Psychology — <strong>Mohammed Muhaiyadeen M</strong>, <strong>Abijith KB</strong>, <strong>Jeevan KJ</strong>, and <strong>Leasker Paulraj DJ</strong> — our journey began with a shared belief: everyone deserves access to ethical, empathetic, and meaningful psychological support.
-                    </p>
-
-                    <p className="about-text">
-                        Rooted in scientific practice and human connection, we create a safe, confidential space where individuals can explore challenges, build resilience, and move toward clarity and emotional wellbeing.
-                    </p>
-
-                    <div className="about-services">
-                        <h3>Our team supports:</h3>
-                        <ul className="about-list">
-                            <li>School students</li>
-                            <li>Persons with disabilities</li>
-                            <li>Working professionals</li>
-                            <li>Families</li>
-                        </ul>
-                    </div>
-
-                    <p className="about-text">
-                        We work across emotional wellbeing, academic concerns, workplace stress, relationships, and family dynamics — offering personalized care guided by proven therapeutic approaches.
-                    </p>
-
-                    <div className="about-philosophy">
-                        <p>
-                            At Thee You Space, therapy is not about fixing — it's about understanding, growth, and empowerment.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="about-team">
-                    <h3 className="team-title">Meet Our Team</h3>
-                    <div className="team-grid">
-                        {TEAM_MEMBERS.map((member, index) => (
-                            <div key={index} className="team-member">
-                                <h4 className="member-name">{member.name}</h4>
-                                <p className="member-title">{member.title}</p>
-                                <p className="member-specialization">
-                                    <strong>Specializes in:</strong> {member.specialization}
-                                </p>
-                                <p className="member-focus">{member.focus}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="about-actions">
-                    <Button variant="primary" onClick={() => navigate(ROUTES.TRIAGE)}>
-                        Book a session
-                    </Button>
-                    <Button variant="secondary" onClick={() => navigate(ROUTES.HOME)}>
-                        Back to home
-                    </Button>
-                </div>
+            {/* ── CTA ────────────────────────────────────────── */}
+            <div className="about-cta">
+                <button className="about-cta-btn" onClick={() => navigate(ROUTES.TRIAGE)}>
+                    Book a session
+                </button>
             </div>
-        </CalmContainer>
+
+        </div>
     )
 }
 

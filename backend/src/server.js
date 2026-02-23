@@ -117,8 +117,8 @@ app.listen(PORT, () => {
     console.warn('⚠️  Warning: Email credentials not configured')
   }
 
-  // Start Google Sheets auto-sync (every 60 minutes, falls back to dev slots)
-  startAutoSync(60)
+  // Start Google Sheets auto-sync (every 30 minutes, falls back to dev slots)
+  startAutoSync(30)
 })
 
 module.exports = app
