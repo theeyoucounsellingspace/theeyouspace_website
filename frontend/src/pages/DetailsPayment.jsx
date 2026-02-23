@@ -44,7 +44,7 @@ function DetailsPayment() {
     email: '',
     phone: '',
     paymentMethod: 'card',
-    isFirstTimer: false,   // "Have you been to therapy before?" — flipped: true = never been
+    isFirstTimer: null,    // null = unanswered, true = never been, false = returning
   })
 
   const [consentGiven, setConsentGiven] = useState(false)
@@ -86,6 +86,7 @@ function DetailsPayment() {
     if (!formData.email.trim()) { setError('Please enter your email'); return false }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) { setError('Please enter a valid email address'); return false }
+    if (formData.isFirstTimer === null) { setError('Please answer the counselling experience question'); return false }
     if (!consentGiven) { setError('Please read and agree to the Service Agreement to continue'); return false }
     return true
   }
@@ -214,17 +215,28 @@ function DetailsPayment() {
                   placeholder="Your phone number" disabled={submitting} />
               </div>
 
-              {/* First-timer toggle */}
-              <label className="first-timer-toggle">
-                <input
-                  type="checkbox"
-                  name="isFirstTimer"
-                  checked={formData.isFirstTimer}
-                  onChange={handleInputChange}
-                  disabled={submitting}
-                />
-                <span>This is my first time seeing a counsellor</span>
-              </label>
+              {/* Counselling experience question */}
+              <div className="first-timer-question">
+                <p className="first-timer-label">Have you attended a counselling session before?</p>
+                <div className="first-timer-options">
+                  <button
+                    type="button"
+                    className={`first-timer-btn ${formData.isFirstTimer === false ? 'selected' : ''}`}
+                    onClick={() => setFormData(p => ({ ...p, isFirstTimer: false }))}
+                    disabled={submitting}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    className={`first-timer-btn ${formData.isFirstTimer === true ? 'selected' : ''}`}
+                    onClick={() => setFormData(p => ({ ...p, isFirstTimer: true }))}
+                    disabled={submitting}
+                  >
+                    No — this is my first time
+                  </button>
+                </div>
+              </div>
 
               {/* Payment method */}
               <div className="form-group">
