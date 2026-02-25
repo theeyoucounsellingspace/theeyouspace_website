@@ -6,13 +6,67 @@ import { fetchSlots } from '../utils/api'
 import { getProfessional } from '../data/professionals'
 import './Schedule.css'
 
+// ── Per-professional warm-muted color identities ─────────────────────────────
+// Each professional gets a unique hue that appears in their avatar, bio panel
+// tint, tag borders, and slot card accents. Colors stay within the site palette.
+const PRO_COLORS = {
+  'Mohammed Muhaiyadeen M': {
+    hue: '#C4975A',          // warm amber / sand
+    tint: 'rgba(196,151,90,0.08)',
+    gradient: 'linear-gradient(135deg, #C4975A 0%, #E2BC88 100%)',
+    label: '#7a5c2a',
+  },
+  'Leaskar Paulraj DJ': {
+    hue: '#7A9E87',          // sage green / eucalyptus
+    tint: 'rgba(122,158,135,0.08)',
+    gradient: 'linear-gradient(135deg, #7A9E87 0%, #A6C4AD 100%)',
+    label: '#3a5f46',
+  },
+  'Jeevan KJ': {
+    hue: '#B8849A',          // dusty rose / mauve
+    tint: 'rgba(184,132,154,0.08)',
+    gradient: 'linear-gradient(135deg, #B8849A 0%, #D4A9BB 100%)',
+    label: '#7a3f5a',
+  },
+  'Abijith KB': {
+    hue: '#7B9EAE',          // ocean mist / slate blue
+    tint: 'rgba(123,158,174,0.08)',
+    gradient: 'linear-gradient(135deg, #7B9EAE 0%, #A8C3CF 100%)',
+    label: '#3a5f70',
+  },
+  'Joan Ana': {
+    hue: '#9E8AB8',          // warm lavender / lilac
+    tint: 'rgba(158,138,184,0.08)',
+    gradient: 'linear-gradient(135deg, #9E8AB8 0%, #BEB0D4 100%)',
+    label: '#5a3f7a',
+  },
+}
+
+// Fallback for any professional not in the color map
+const DEFAULT_COLOR = {
+  hue: '#a89880',
+  tint: 'rgba(168,152,128,0.08)',
+  gradient: 'linear-gradient(135deg, #a89880 0%, #c4b49e 100%)',
+  label: '#6b5c48',
+}
+
+function getProColor(name) {
+  if (!name) return DEFAULT_COLOR
+  if (PRO_COLORS[name]) return PRO_COLORS[name]
+  // case-insensitive fallback
+  const key = Object.keys(PRO_COLORS).find(
+    k => k.toLowerCase() === name.toLowerCase()
+  )
+  return key ? PRO_COLORS[key] : DEFAULT_COLOR
+}
+
 function Schedule() {
   const navigate = useNavigate()
   const location = useLocation()
   const triageData = location.state?.triageData
 
   const [selectedSlot, setSelectedSlot] = useState(null)
-  const [expandedPro, setExpandedPro] = useState(null)   // which pro's bio panel is open
+  const [expandedPro, setExpandedPro] = useState(null)
   const [grouped, setGrouped] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -58,7 +112,6 @@ function Schedule() {
 
   return (
     <div className="schedule-page">
-      {/* Back */}
       <button className="schedule-back" onClick={() => navigate(-1)} aria-label="Go back">←</button>
 
       <div className="schedule-header">
@@ -85,11 +138,23 @@ function Schedule() {
         <div className="schedule-professionals">
           {Object.entries(grouped).map(([proName, slots]) => {
             const bio = getProfessional(proName)
+            const color = getProColor(proName)
             const isOpen = expandedPro === proName
 
-            return (
-              <div key={proName} className={`pro-group ${isOpen ? 'open' : ''}`}>
+            // Inject color as CSS custom properties on each card
+            const colorVars = {
+              '--pro-hue': color.hue,
+              '--pro-tint': color.tint,
+              '--pro-gradient': color.gradient,
+              '--pro-label': color.label,
+            }
 
+            return (
+              <div
+                key={proName}
+                className={`pro-group ${isOpen ? 'open' : ''}`}
+                style={colorVars}
+              >
                 {/* Professional header row — click to expand bio */}
                 <button
                   className="pro-header"
@@ -105,15 +170,22 @@ function Schedule() {
                     <span className="pro-sub">
                       {bio ? `${bio.title} · ${bio.experience}` : 'Counseling Psychologist'}
                       {' · '}
-                      <span className="pro-slot-count">{slots.length} slot{slots.length !== 1 ? 's' : ''}</span>
+                      <span className="pro-slot-count">
+                        {slots.length} slot{slots.length !== 1 ? 's' : ''}
+                      </span>
                     </span>
                   </div>
                   <span className="pro-chevron" aria-hidden="true">{isOpen ? '▲' : '▼'}</span>
                 </button>
 
-                {/* Bio panel */}
+                {/* Bio panel — fades in with the professional's personal tint */}
                 {isOpen && bio && (
-                  <div className="pro-bio" id={`bio-${proName}`} role="region" aria-label={`About ${proName}`}>
+                  <div
+                    className="pro-bio"
+                    id={`bio-${proName}`}
+                    role="region"
+                    aria-label={`About ${proName}`}
+                  >
                     <p className="pro-approach">{bio.approach}</p>
                     <div className="pro-tags">
                       {bio.specializations.map(s => (
@@ -123,7 +195,7 @@ function Schedule() {
                   </div>
                 )}
 
-                {/* Slots grid — always visible once pro section is in view */}
+                {/* Slots — left-border accent uses the professional's personal hue */}
                 <div className="pro-slots">
                   {slots.map(slot => (
                     <button
@@ -137,7 +209,6 @@ function Schedule() {
                     </button>
                   ))}
                 </div>
-
               </div>
             )
           })}

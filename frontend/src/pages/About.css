@@ -168,6 +168,52 @@
     flex-shrink: 0;
 }
 
+/* ── WhatsApp express channel ─────────────────────────── */
+
+.contact-express {
+    margin-top: 1.75rem;
+    padding: 1.25rem 1.5rem;
+    background: #fdf6ec;
+    /* warm honey tint — distinct from surface */
+    border: 1px solid #e8d9c0;
+    border-radius: 12px;
+}
+
+.contact-express-heading {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin: 0 0 0.5rem;
+}
+
+.contact-express-body {
+    font-size: 0.88rem;
+    color: var(--color-text-muted);
+    line-height: 1.7;
+    margin: 0 0 0.9rem;
+}
+
+.contact-express-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: #6b7c5a;
+    /* muted olive — not WhatsApp green */
+    text-decoration: none;
+    border-bottom: 1px solid #b8c9a8;
+    padding-bottom: 1px;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.contact-express-link:hover {
+    color: #4a5c3a;
+    border-bottom-color: #6b7c5a;
+}
+
+
 /* ── Disclaimer ───────────────────────────────────────── */
 
 .about-disclaimer {
