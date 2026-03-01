@@ -13,10 +13,7 @@ function About() {
     return (
         <div className="about-page">
 
-            {/* Back */}
-            <button className="about-back" onClick={() => navigate(ROUTES.HOME)} aria-label="Back to home">
-                ←
-            </button>
+
 
             {/* ── Hero ───────────────────────────────────────────── */}
             <section className="about-hero">

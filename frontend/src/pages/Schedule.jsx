@@ -112,7 +112,6 @@ function Schedule() {
 
   return (
     <div className="schedule-page">
-      <button className="schedule-back" onClick={() => navigate(-1)} aria-label="Go back">←</button>
 
       <div className="schedule-header">
         <h2 className="schedule-title">Choose your professional &amp; time</h2>

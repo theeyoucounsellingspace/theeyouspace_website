@@ -17,10 +17,8 @@
 /* ── Back arrow ──────────────────────────────────────────── */
 
 .triage-back {
-  position: fixed;
-  top: 1.25rem;
-  left: 1.25rem;
-  z-index: 50;
+  align-self: flex-start;
+  margin-bottom: 2rem;
   background: none;
   border: none;
   font-size: 1.5rem;

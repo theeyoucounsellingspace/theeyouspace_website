@@ -10,27 +10,7 @@
     animation: var(--fade-in);
 }
 
-/* Back arrow */
-.about-back {
-    position: fixed;
-    top: 1.25rem;
-    left: 1.25rem;
-    z-index: 50;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    padding: 0.5rem 0.75rem;
-    border-radius: 8px;
-    transition: color 0.2s, background 0.2s;
-    line-height: 1;
-}
 
-.about-back:hover {
-    color: var(--color-text);
-    background: var(--color-border-light);
-}
 
 /* ── Hero ─────────────────────────────────────────────── */
 
