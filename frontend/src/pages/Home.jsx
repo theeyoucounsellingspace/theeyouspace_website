@@ -22,13 +22,13 @@ function Home() {
               variant="primary"
               onClick={() => navigate(ROUTES.TRIAGE)}
             >
-              Get Started
+              Book a session
             </Button>
             <Button
               variant="secondary"
               onClick={() => navigate(ROUTES.PRIORITY)}
             >
-              I need to talk to someone now
+              Book a session <i>now</i>
             </Button>
           </div>
 

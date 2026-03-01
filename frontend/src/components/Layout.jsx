@@ -36,9 +36,7 @@ function Layout({ children }) {
           <p className="footer-disclaimer">
             Sessions at Thee You Space are conducted by trained Counseling Psychologists.
             This is an outpatient service and is <strong>not a substitute for emergency psychiatric care</strong>.
-            {' '}If you are in immediate danger, call iCall:{' '}
-            <a href="tel:9152987821" className="footer-link">9152987821</a>{' '}
-            or visit your nearest emergency room.
+            {' '}If you are in immediate danger, please visit your nearest emergency room.
           </p>
 
           {/* Links row */}

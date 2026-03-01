@@ -129,8 +129,7 @@ function About() {
                     <strong>Professional service notice:</strong> Sessions at Thee You Space are provided
                     voluntarily by you and conducted by trained Counseling Psychologists. This is an
                     outpatient counselling service and is <strong>not a substitute for emergency psychiatric
-                        care</strong>. If you or someone you know is in immediate danger, please contact a
-                    national helpline (iCall: <a href="tel:9152987821">9152987821</a>) or visit
+                        care</strong>. If you or someone you know is in immediate danger, please visit
                     your nearest emergency room.
                 </p>
             </section>
