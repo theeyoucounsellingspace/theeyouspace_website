@@ -107,3 +107,19 @@ export async function reportPaymentFailure(orderId) {
     const data = await response.json()
     return data.booking
 }
+
+/**
+ * Fetch professionals list (populated from Google Sheet sync)
+ * @returns {Promise<Array>} Array of professional objects
+ */
+export async function fetchProfessionals() {
+    const response = await fetch(`${API_BASE_URL}/professionals`)
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed to fetch professionals' }))
+        throw new Error(error.error || 'Failed to fetch professionals')
+    }
+
+    const data = await response.json()
+    return data.professionals || []
+}

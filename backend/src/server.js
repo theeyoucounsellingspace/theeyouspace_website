@@ -11,6 +11,7 @@ const paymentRoutes = require('./routes/payment.routes')
 const priorityRoutes = require('./routes/priority.routes')
 const exportRoutes = require('./routes/export.routes')
 const slotsRoutes = require('./routes/slots.routes')
+const professionalsRoutes = require('./routes/professionals.routes')
 
 // Google Sheets sync
 const { startAutoSync } = require('./services/googleSheets.service')
@@ -99,6 +100,7 @@ app.use('/api/payment', paymentRoutes)
 app.use('/api/priority', priorityRoutes)
 app.use('/api/export', exportRoutes)
 app.use('/api/slots', slotsRoutes)
+app.use('/api/professionals', professionalsRoutes)
 
 // ===== ERROR HANDLING =====
 

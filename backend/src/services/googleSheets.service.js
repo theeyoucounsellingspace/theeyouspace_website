@@ -24,6 +24,7 @@
 const https = require('https')
 const http = require('http')
 const AvailabilitySlot = require('../models/AvailabilitySlot')
+const ProfessionalsService = require('./professionals.service')
 
 // ─── HTTP fetch with redirect support ────────────────────────────────────────
 
@@ -102,6 +103,11 @@ function detectColumns(headerCols) {
         professional: lower.findIndex((c) => c.includes('professional') || c.includes('counsellor') || c.includes('counselor') || c.includes('name')),
         date: lower.findIndex((c) => c.includes('date')),
         time: lower.findIndex((c) => c.includes('time')),
+        // Optional bio columns — if present, professionals cache is auto-built
+        title: lower.findIndex((c) => c === 'title' || c === 'designation'),
+        bio: lower.findIndex((c) => c === 'bio' || c === 'about' || c === 'description'),
+        specializations: lower.findIndex((c) => c.includes('specializ') || c.includes('approach')),
+        areas: lower.findIndex((c) => c === 'areas' || c.includes('focus')),
     }
 }
 
@@ -119,13 +125,20 @@ function parseCsvToSlots(csvText) {
     if (cols.time === -1) throw new Error(`No "Time" column found. Headers: ${headerCols.join(', ')}`)
 
     const hasProfessional = cols.professional !== -1
+    const hasBioColumns = cols.title !== -1 || cols.bio !== -1 || cols.specializations !== -1 || cols.areas !== -1
+
     if (!hasProfessional) {
         console.warn('[Slot Sync] No "Professional" column found — slots will show without a professional name')
+    }
+    if (hasBioColumns) {
+        console.log('[Slot Sync] Bio columns detected — professionals cache will be updated from sheet')
     }
 
     const slots = []
     const errors = []
     const warnings = []
+    /** Map<lowercaseName, professionalObject> — deduplicates by name */
+    const profMap = new Map()
 
     lines.slice(1).forEach((line, index) => {
         const rowNum = index + 2
@@ -134,8 +147,32 @@ function parseCsvToSlots(csvText) {
         const values = parseCsvLine(line)
         const date = values[cols.date]?.trim()
         const time = values[cols.time]?.trim()
-        const professional = hasProfessional ? (values[cols.professional]?.trim() || 'General') : 'General'
+        const name = hasProfessional ? (values[cols.professional]?.trim() || '') : ''
+        const professional = name || 'General'
 
+        // ── Build professionals cache from bio columns ──────────────────
+        if (name && hasBioColumns) {
+            const key = name.toLowerCase()
+            if (!profMap.has(key)) {
+                // Parse comma-separated lists for specializations and areas
+                const rawSpecializations = cols.specializations !== -1 ? values[cols.specializations]?.trim() : ''
+                const rawAreas = cols.areas !== -1 ? values[cols.areas]?.trim() : ''
+
+                profMap.set(key, {
+                    name,
+                    title: cols.title !== -1 ? (values[cols.title]?.trim() || '') : '',
+                    bio: cols.bio !== -1 ? (values[cols.bio]?.trim() || '') : '',
+                    specializations: rawSpecializations ? rawSpecializations.split(',').map((s) => s.trim()).filter(Boolean) : [],
+                    areas: rawAreas ? rawAreas.split(',').map((s) => s.trim()).filter(Boolean) : [],
+                })
+            }
+        } else if (name) {
+            // No bio columns — still register the professional by name
+            const key = name.toLowerCase()
+            if (!profMap.has(key)) profMap.set(key, { name })
+        }
+
+        // ── Slot validation ─────────────────────────────────────────────
         if (!date && !time) return
         if (!date) { errors.push(`Row ${rowNum}: missing date`); return }
         if (!time) { errors.push(`Row ${rowNum}: missing time for "${date}"`); return }
@@ -152,7 +189,7 @@ function parseCsvToSlots(csvText) {
         slots.push({ date, time, professional })
     })
 
-    return { slots, errors, warnings }
+    return { slots, errors, warnings, professionals: [...profMap.values()] }
 }
 
 // ─── Sync ─────────────────────────────────────────────────────────────────────
@@ -170,7 +207,7 @@ async function syncSlotsFromSheet() {
     console.log('[Slot Sync] Fetching from Google Sheet...')
 
     const csvText = await fetchUrl(sheetUrl)
-    const { slots, errors, warnings } = parseCsvToSlots(csvText)
+    const { slots, errors, warnings, professionals } = parseCsvToSlots(csvText)
 
     if (slots.length === 0) {
         throw new Error(`No valid slots parsed. Errors: ${errors.join('; ')}`)
@@ -180,7 +217,12 @@ async function syncSlotsFromSheet() {
     console.log(`[Slot Sync] ✅ Synced ${count} slots from Google Sheet`)
     if (warnings.length) console.warn(`[Slot Sync] ⚠️  ${warnings.join(' | ')}`)
 
-    return { count, errors, warnings }
+    // Update professionals cache (always — even if bio columns are absent, names are registered)
+    if (professionals.length > 0) {
+        ProfessionalsService.setProfessionals(professionals)
+    }
+
+    return { count, errors, warnings, professionals: professionals.length }
 }
 
 function startAutoSync(intervalMinutes = 60) {
