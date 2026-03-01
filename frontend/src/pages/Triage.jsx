@@ -35,10 +35,8 @@ const IMPACTS = [
 
 // ── Step 4: Urgency / session type ───────────────────────────────────────────
 const URGENCY = [
-  { id: 'routine', label: 'Routine check-in', desc: 'Not urgent — I want to start talking', sessionType: 'normal', crisis: false },
-  { id: 'moderate', label: 'Need support this week', desc: 'It\'s affecting my daily life', sessionType: 'normal', crisis: false },
-  { id: 'priority', label: 'Sooner the better', desc: 'I need to speak to someone soon', sessionType: 'priority', crisis: false },
-  { id: 'urgent', label: 'I\'m in crisis right now', desc: 'I need immediate support', sessionType: 'priority', crisis: true },
+  { id: 'routine', label: 'At my convenience', desc: 'Find a time that fits into your week naturally.', sessionType: 'normal', crisis: false },
+  { id: 'priority', label: 'I need to speak with someone sooner', desc: 'For times when things feel urgent. We\'ll prioritise finding you a slot.', sessionType: 'priority', crisis: false },
 ]
 
 const TOTAL = 4
