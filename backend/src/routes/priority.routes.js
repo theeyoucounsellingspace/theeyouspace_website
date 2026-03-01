@@ -10,18 +10,12 @@ router.get('/pricing', (req, res) => {
   try {
     const pricing = getPriorityPricing()
 
-    // Convert to rupees for display
-    const baseAmount = pricing.baseAmount / 100
-    const platformFee = pricing.platformFee / 100
-    const totalAmount = pricing.totalAmount / 100
-
     res.json({
       success: true,
       pricing: {
-        baseAmount,
-        platformFee,
-        totalAmount,
-        currency: 'INR',
+        displayAmount: pricing.displayAmount,   // 1020 (INR)
+        totalAmount: pricing.totalAmount,      // 102000 (paise)
+        currency: pricing.currency,
       },
     })
   } catch (error) {

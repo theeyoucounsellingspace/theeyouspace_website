@@ -28,7 +28,7 @@ function Home() {
               variant="secondary"
               onClick={() => navigate(ROUTES.PRIORITY)}
             >
-              Book a session <i>now</i>
+              Book a session "now"
             </Button>
           </div>
 
