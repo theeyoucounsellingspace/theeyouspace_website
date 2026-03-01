@@ -24,19 +24,23 @@ async function createPaymentOrder(bookingData) {
 
   // Get pricing
   const pricing = getPricing(sessionType)
-  console.log(`[Order Creation] Pricing: Base ₹${pricing.baseAmount / 100}, Fee ₹${pricing.platformFee / 100}, Total ₹${pricing.totalAmount / 100}`)
+  console.log(`[Order Creation] Pricing: Rs.${pricing.displayAmount} incl. taxes (${pricing.totalAmount} paise)`)
 
   // Create booking record
   const booking = Booking.create({
     ...bookingData,
-    pricing,
+    pricing: {
+      displayAmount: pricing.displayAmount,
+      totalAmount: pricing.totalAmount,
+      currency: pricing.currency,
+    },
     paymentStatus: PAYMENT_STATUS.PENDING,
     bookingStatus: BOOKING_STATUS.PENDING,
   })
 
   console.log(`[Order Creation] Booking created: ${booking.id}`)
 
-  // Create Razorpay order
+  // Create Razorpay order (amount in paise)
   const order = await createOrder({
     amount: pricing.totalAmount,
     currency: 'INR',

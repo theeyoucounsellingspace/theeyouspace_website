@@ -1,23 +1,29 @@
 /**
  * Pricing Service
- * Handles calculation of session prices based on type and duration
+ * All prices are GST-inclusive (18%) final amounts.
+ * Razorpay expects amounts in paise (1 INR = 100 paise).
  */
 
-const PRICING = {
-  normal: 1000, // ₹1000 for normal session
-  priority: 2000 // ₹2000 for priority session
+// Final prices shown to the customer — inclusive of all taxes
+const PRICING_INR = {
+  normal: 613,   // Rs.613 all-inclusive
+  priority: 1020,  // Rs.1020 all-inclusive
 }
 
 /**
- * Get price for a session type
+ * Get pricing details for a session type.
  * @param {string} sessionType - 'normal' or 'priority'
- * @returns {number} - Price in INR
+ * @returns {{ displayAmount: number, totalAmount: number, currency: string }}
+ *   displayAmount  -> human-readable INR (for the frontend)
+ *   totalAmount    -> paise (for Razorpay API)
  */
 const getPricing = (sessionType = 'normal') => {
-  return PRICING[sessionType] || PRICING.normal
+  const inr = PRICING_INR[sessionType] || PRICING_INR.normal
+  return {
+    displayAmount: inr,          // 613 / 1020
+    totalAmount: inr * 100,    // 61300 / 102000 paise for Razorpay
+    currency: 'INR',
+  }
 }
 
-module.exports = {
-  getPricing,
-  PRICING
-}
+module.exports = { getPricing, PRICING_INR }

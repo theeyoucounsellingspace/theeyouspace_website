@@ -180,14 +180,9 @@ function DetailsPayment() {
               <p><strong>Time:</strong> {selectedSlot.time}</p>
               {professional && <p><strong>Professional:</strong> {professional.name || professional}</p>}
               <div className="pricing-breakdown">
-                <div className="pricing-row">
-                  <span>Session fee:</span><span>₹{pricing.baseAmount.toFixed(2)}</span>
-                </div>
-                <div className="pricing-row">
-                  <span>Processing fee:</span><span>₹{pricing.platformFee.toFixed(2)}</span>
-                </div>
                 <div className="pricing-row pricing-total">
-                  <strong>Total:</strong><strong>₹{pricing.totalAmount.toFixed(2)}</strong>
+                  <strong>Amount payable:</strong>
+                  <strong>₹{pricing.displayAmount} <span className="pricing-tax-note">(incl. taxes)</span></strong>
                 </div>
               </div>
             </div>
