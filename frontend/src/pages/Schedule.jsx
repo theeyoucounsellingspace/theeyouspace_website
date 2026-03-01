@@ -127,12 +127,6 @@ function Schedule() {
                       <span className="pro-card-value">{bio.languages}</span>
                     </div>
                   )}
-                  {bio?.mode && (
-                    <div className="pro-card-row">
-                      <span className="pro-card-label">Mode</span>
-                      <span className="pro-card-value">{bio.mode}</span>
-                    </div>
-                  )}
                   {bio?.specializations?.length > 0 && (
                     <div className="pro-card-row pro-card-row--top">
                       <span className="pro-card-label">Expertise</span>
