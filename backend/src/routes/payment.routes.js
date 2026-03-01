@@ -98,7 +98,7 @@ router.post(
  * Razorpay webhook handler
  * Idempotent - safe to process multiple times
  */
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhook', async (req, res) => {
   try {
     const crypto = require('crypto')
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET
@@ -111,10 +111,10 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       return res.status(500).json({ success: false, error: 'Webhook not configured' })
     }
 
-    // Verify webhook signature
+    // Verify webhook signature using the raw buffer from server.js
     const expectedSignature = crypto
       .createHmac('sha256', secret)
-      .update(JSON.stringify(req.body))
+      .update(req.rawBody)
       .digest('hex')
 
     if (signature !== expectedSignature) {

@@ -67,7 +67,13 @@ const corsOptions = {
 app.use(cors(corsOptions))
 
 // 3. Request Size Limits (prevent DOS)
-app.use(express.json({ limit: '10kb' })) // Max 10KB JSON payloads
+// Store raw buffer for Razorpay webhook signature verification
+app.use(express.json({
+  limit: '10kb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}))
 app.use(express.urlencoded({ extended: true, limit: '10kb' }))
 
 // 4. Data Sanitization against NoSQL injection
