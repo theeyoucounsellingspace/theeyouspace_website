@@ -106,8 +106,13 @@ function detectColumns(headerCols) {
         // Optional bio columns — if present, professionals cache is auto-built
         title: lower.findIndex((c) => c === 'title' || c === 'designation'),
         bio: lower.findIndex((c) => c === 'bio' || c === 'about' || c === 'description'),
-        specializations: lower.findIndex((c) => c.includes('specializ') || c.includes('approach')),
+        specializations: lower.findIndex((c) => c.includes('specializ') || c.includes('expertise') || c.includes('approach')),
         areas: lower.findIndex((c) => c === 'areas' || c.includes('focus')),
+        // Card display columns
+        experience: lower.findIndex((c) => c.includes('experience') || c.includes('exp')),
+        languages: lower.findIndex((c) => c.includes('language') || c.includes('speaks') || c.includes('tongue')),
+        mode: lower.findIndex((c) => c === 'mode' || c.includes('session mode') || c.includes('online')),
+        price: lower.findIndex((c) => c === 'price' || c.includes('fee') || c.includes('rate') || c.includes('amount')),
     }
 }
 
@@ -126,6 +131,7 @@ function parseCsvToSlots(csvText) {
 
     const hasProfessional = cols.professional !== -1
     const hasBioColumns = cols.title !== -1 || cols.bio !== -1 || cols.specializations !== -1 || cols.areas !== -1
+        || cols.experience !== -1 || cols.languages !== -1 || cols.mode !== -1 || cols.price !== -1
 
     if (!hasProfessional) {
         console.warn('[Slot Sync] No "Professional" column found — slots will show without a professional name')
@@ -164,6 +170,11 @@ function parseCsvToSlots(csvText) {
                     bio: cols.bio !== -1 ? (values[cols.bio]?.trim() || '') : '',
                     specializations: rawSpecializations ? rawSpecializations.split(',').map((s) => s.trim()).filter(Boolean) : [],
                     areas: rawAreas ? rawAreas.split(',').map((s) => s.trim()).filter(Boolean) : [],
+                    // Card display fields
+                    experience: cols.experience !== -1 ? (values[cols.experience]?.trim() || '') : '',
+                    languages: cols.languages !== -1 ? (values[cols.languages]?.trim() || '') : '',
+                    mode: cols.mode !== -1 ? (values[cols.mode]?.trim() || '') : '',
+                    price: cols.price !== -1 ? (values[cols.price]?.trim() || '') : '',
                 })
             }
         } else if (name) {

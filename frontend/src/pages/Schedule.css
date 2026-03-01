@@ -1,306 +1,358 @@
 /* ════════════════════════════════════════════════════
-   Schedule — professional groups + slot picker
-   Per-professional colour identities via CSS vars:
-     --pro-hue, --pro-tint, --pro-gradient, --pro-label
+   Schedule — professional card list (Love Hope style)
    ════════════════════════════════════════════════════ */
 
 .schedule-page {
-  max-width: 640px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 5rem 1.5rem 4rem;
-  position: relative;
+  padding: 5rem 1.25rem 4rem;
 }
 
-/* ── Back ──────────────────────────────────────────── */
-
-.schedule-back {
-  position: fixed;
-  top: 1.25rem;
-  left: 1.25rem;
-  z-index: 50;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  transition: color 0.2s, background 0.2s;
-  line-height: 1;
-}
-
-.schedule-back:hover {
-  color: var(--color-text);
-  background: var(--color-border-light);
-}
-
-/* ── Header ────────────────────────────────────────── */
+/* ── Header ─────────────────────────────────────────── */
 
 .schedule-header {
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
 }
 
 .schedule-title {
   font-family: var(--font-family-serif);
-  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  font-size: clamp(1.5rem, 5vw, 2rem);
   font-weight: 400;
   color: var(--color-text);
   line-height: 1.25;
-  letter-spacing: -0.02em;
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.4rem;
 }
 
 .schedule-subtitle {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--color-text-muted);
-  line-height: 1.65;
   margin: 0;
 }
 
-/* ── States ────────────────────────────────────────── */
+/* ── States ─────────────────────────────────────────── */
 
 .schedule-state {
   text-align: center;
-  padding: 3rem 0;
+  padding: 4rem 0;
   color: var(--color-text-muted);
   font-size: 0.95rem;
 }
 
 .schedule-error-msg {
-  color: var(--color-error);
+  color: #c0392b;
   margin-bottom: 1rem;
 }
 
-/* ── Professional groups ────────────────────────────── */
-
-.schedule-professionals {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.sched-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary, #7a9e87);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
 }
 
-.pro-group {
-  border: 1.5px solid var(--color-border);
-  border-radius: 16px;
-  overflow: hidden;
-  background: var(--color-surface);
-  transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* On hover — card lifts gently with a coloured shadow */
-.pro-group:hover {
-  border-color: var(--pro-hue, var(--color-border));
-  box-shadow: 0 6px 24px -4px color-mix(in srgb, var(--pro-hue, #a89880) 25%, transparent);
-  transform: translateY(-2px);
-}
-
-/* When bio is open — border glows in their color */
-.pro-group.open {
-  border-color: var(--pro-hue, var(--color-primary-light));
-  box-shadow: 0 4px 20px -4px color-mix(in srgb, var(--pro-hue, #a89880) 20%, transparent);
-}
-
-/* ── Professional header button ─────────────────────── */
-
-.pro-header {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.25rem 1.5rem;
-  background: none;
+.sched-retry-btn {
+  background: var(--color-text);
+  color: #fff;
   border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  text-align: left;
-  transition: background 0.2s;
   font-family: inherit;
 }
 
-.pro-header:hover {
-  background: var(--pro-tint, var(--color-primary-subtle));
-}
+/* ── Card list ──────────────────────────────────────── */
 
-/* ── Avatar — per-professional gradient ──────────────── */
-
-.pro-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--pro-gradient, linear-gradient(135deg, #a89880 0%, #c4b49e 100%));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-family-serif);
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: #fff;
-  flex-shrink: 0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-  transition: transform 0.2s;
-}
-
-.pro-header:hover .pro-avatar {
-  transform: scale(1.06);
-}
-
-.pro-meta {
+.schedule-list {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 1rem;
+}
+
+/* ── Individual professional card ───────────────────── */
+
+.pro-card {
+  background: #fff;
+  border: 1px solid #e5e0d8;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.pro-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.09);
+  transform: translateY(-1px);
+}
+
+/* ── Top row: info left, avatar right ───────────────── */
+
+.pro-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem 1.25rem 0;
+  gap: 1rem;
+}
+
+.pro-card-info {
   flex: 1;
   min-width: 0;
 }
 
-.pro-name {
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--color-text);
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.pro-card-title {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+  letter-spacing: 0.01em;
+  margin-bottom: 0.15rem;
 }
 
-.pro-sub {
+.pro-card-name {
+  font-family: var(--font-family-serif, Georgia, serif);
+  font-size: clamp(1.3rem, 4vw, 1.7rem);
+  font-weight: 400;
+  color: var(--color-text, #2a2520);
+  margin: 0 0 0.25rem;
+  line-height: 1.2;
+}
+
+.pro-card-exp {
   font-size: 0.82rem;
-  color: var(--color-text-muted);
-  line-height: 1.4;
+  color: var(--color-text-muted, #888);
+  margin: 0;
 }
 
-.pro-slot-count {
-  color: var(--pro-hue, var(--color-primary));
-  font-weight: 500;
-}
-
-.pro-chevron {
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
+/* Avatar — circle with initial */
+.pro-card-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7A9E87 0%, #A6C4AD 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  transition: color 0.2s;
+  overflow: hidden;
+  border: 2px solid #e5f0e8;
 }
 
-.pro-group.open .pro-chevron {
-  color: var(--pro-hue, var(--color-primary));
+.pro-card-avatar span {
+  font-family: var(--font-family-serif, Georgia, serif);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  line-height: 1;
 }
 
-/* ── Bio panel — fades in with their personal tint ───── */
+/* ── Detail rows ────────────────────────────────────── */
 
-.pro-bio {
-  padding: 0 1.5rem 1.25rem;
-  border-bottom: 1px solid var(--color-border-light);
-  background: var(--pro-tint, transparent);
-  animation: bioFadeIn 0.3s ease both;
-}
-
-@keyframes bioFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.pro-approach {
-  font-size: 0.9rem;
-  color: var(--color-text-light);
-  line-height: 1.7;
-  margin: 0 0 0.85rem;
-}
-
-.pro-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-/* Tag chip — border in their personal color */
-.pro-tag {
-  font-size: 0.77rem;
-  color: var(--pro-label, var(--color-primary-dark));
-  background: var(--pro-tint, var(--color-primary-subtle));
-  border: 1px solid color-mix(in srgb, var(--pro-hue, #a89880) 30%, transparent);
-  border-radius: 999px;
-  padding: 3px 10px;
-  white-space: nowrap;
-}
-
-/* ── Slot cards ───────────────────────────────────────── */
-
-.pro-slots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  padding: 1.25rem 1.5rem;
-}
-
-.slot-card {
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-left: 3px solid var(--pro-hue, var(--color-border));
-  /* personal left accent */
-  border-radius: 12px;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
+.pro-card-details {
+  padding: 1rem 1.25rem 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  text-align: left;
-  font-family: inherit;
-  transition: border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.2s;
-  min-width: 110px;
+  gap: 0.55rem;
 }
 
-.slot-card:hover {
-  background: var(--pro-tint, var(--color-primary-subtle));
-  border-color: var(--pro-hue, var(--color-primary-light));
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--pro-hue, #a89880) 30%, transparent);
+.pro-card-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.88rem;
 }
 
-.slot-card.selected {
-  border-color: var(--pro-hue, var(--color-primary));
-  background: var(--pro-tint, var(--color-primary-subtle));
+.pro-card-row--top {
+  align-items: flex-start;
 }
 
-.slot-date {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  line-height: 1.3;
+.pro-card-label {
+  font-weight: 600;
+  color: var(--color-text, #2a2520);
+  min-width: 72px;
+  flex-shrink: 0;
+  font-size: 0.85rem;
 }
 
-.slot-time {
-  font-size: 0.95rem;
+.pro-card-value {
+  color: var(--color-text-light, #555);
+}
+
+.pro-card-price {
+  font-size: 0.92rem;
   font-weight: 500;
-  color: var(--color-text);
+  color: var(--color-text, #2a2520);
+}
+
+/* Expertise tags */
+.pro-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pro-card-tag {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #666);
+  background: #f5f3ef;
+  border: 1px solid #e5e0d8;
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+/* ── All slots grid ──────────────────────────────────── */
+
+.pro-card-slots {
+  padding: 0.5rem 1.25rem 0.25rem;
+}
+
+.pro-card-slots-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #888);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.pro-card-slots-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.slot-pill {
+  background: #f8f6f2;
+  border: 1px solid #e5e0d8;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.slot-pill:hover {
+  background: #eef5f0;
+  border-color: #7A9E87;
+}
+
+.slot-pill-date {
+  font-size: 0.72rem;
+  color: var(--color-text-muted, #888);
+  line-height: 1.2;
+}
+
+.slot-pill-time {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text, #2a2520);
+  line-height: 1.2;
+}
+
+/* ── Footer: next slot + BOOK NOW ───────────────────── */
+
+.pro-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.25rem;
+  border-top: 1px solid #eeebe5;
+  margin-top: 0.75rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pro-card-next {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.pro-card-next-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #888);
   line-height: 1.3;
 }
 
-/* ── Desktop refinements ─────────────────────────────── */
+.pro-card-next-slot {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #c0782a;
+  /* warm amber — matches the orange next-slot style in screenshot */
+  line-height: 1.3;
+}
+
+/* BOOK NOW button — black, bold, uppercase */
+.pro-book-btn {
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.pro-book-btn:hover {
+  background: #333;
+}
+
+.pro-book-btn:active {
+  transform: scale(0.97);
+}
+
+/* ── Responsive ─────────────────────────────────────── */
+
+@media (max-width: 400px) {
+  .pro-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pro-book-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
 
 @media (min-width: 640px) {
   .schedule-page {
     padding: 6rem 2rem 5rem;
   }
 
-  .pro-header {
-    padding: 1.4rem 1.75rem;
+  .pro-card-top {
+    padding: 1.5rem 1.5rem 0;
   }
 
-  .pro-bio {
-    padding: 0 1.75rem 1.4rem;
+  .pro-card-details {
+    padding: 1.1rem 1.5rem 0.5rem;
   }
 
-  .pro-slots {
-    padding: 1.4rem 1.75rem;
-    gap: 0.75rem;
+  .pro-card-slots {
+    padding: 0.5rem 1.5rem 0.25rem;
   }
 
-  .slot-card {
-    min-width: 130px;
-    padding: 0.85rem 1.25rem;
+  .pro-card-footer {
+    padding: 0.9rem 1.5rem;
   }
 }

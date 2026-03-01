@@ -33,6 +33,11 @@ function setProfessionals(professionals) {
             bio: p.bio || '',
             specializations: Array.isArray(p.specializations) ? p.specializations : [],
             areas: Array.isArray(p.areas) ? p.areas : [],
+            // Card display fields
+            experience: p.experience || '',
+            languages: p.languages || '',
+            mode: p.mode || '',
+            price: p.price || '',
         })
     }
     _cache = next
