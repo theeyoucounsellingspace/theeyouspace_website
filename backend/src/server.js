@@ -46,16 +46,29 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    // Allowed origins
+    // Build allowed origins list:
+    // 1. Dev localhost ports
+    // 2. FRONTEND_URL single value (backwards compat)
+    // 3. ALLOWED_ORIGINS comma-separated list (production — add all domains here)
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:5174',
       'http://localhost:5175',
       'http://localhost:3000',
-      process.env.FRONTEND_URL
     ];
 
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+    if (process.env.FRONTEND_URL) {
+      allowedOrigins.push(process.env.FRONTEND_URL.trim());
+    }
+
+    if (process.env.ALLOWED_ORIGINS) {
+      process.env.ALLOWED_ORIGINS.split(',').forEach(o => {
+        const trimmed = o.trim();
+        if (trimmed) allowedOrigins.push(trimmed);
+      });
+    }
+
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       console.log('Blocked by CORS:', origin);
