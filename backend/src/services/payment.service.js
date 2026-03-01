@@ -4,6 +4,7 @@ const { SESSION_TYPES, PAYMENT_STATUS, BOOKING_STATUS } = require('../utils/cons
 const Booking = require('../models/Booking')
 const { bookSlot, releaseSlot } = require('./calendar.service')
 const { sendBookingConfirmation } = require('./email.service')
+const { removeSlotFromSheet } = require('./sheetWriteback.service')
 
 /**
  * Create a payment order for booking
@@ -120,7 +121,7 @@ async function verifyAndProcessPayment(paymentData) {
   }
   Booking.updateById(booking.id, updates)
 
-  // Book the slot
+  // Book the slot in memory
   const slotBooked = bookSlot(
     booking.selectedSlot.date,
     booking.selectedSlot.time,
@@ -128,10 +129,25 @@ async function verifyAndProcessPayment(paymentData) {
   )
 
   if (!slotBooked) {
-    // Slot was taken - this is a race condition
+    // Slot was taken — race condition
     console.warn(`[Booking Confirmation] Slot unavailable for booking ${booking.id}`)
   } else {
-    console.log(`[Booking Confirmation] Slot booked successfully for booking ${booking.id}`)
+    console.log(`[Booking Confirmation] Slot booked in memory for booking ${booking.id}`)
+
+    // Remove the slot from Google Sheet so it never reappears after restart
+    removeSlotFromSheet(
+      booking.selectedSlot.professional || booking.professional,
+      booking.selectedSlot.date,
+      booking.selectedSlot.time
+    ).then(result => {
+      if (result.removed) {
+        console.log(`[SheetWriteback] Slot removed from sheet for booking ${booking.id}`)
+      } else {
+        console.warn(`[SheetWriteback] Could not remove from sheet: ${result.reason}`)
+      }
+    }).catch(err => {
+      console.error(`[SheetWriteback] Unexpected error for booking ${booking.id}:`, err.message)
+    })
   }
 
   // Send confirmation email (non-blocking)

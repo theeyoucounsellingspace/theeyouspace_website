@@ -20,14 +20,17 @@ function isSlotAvailable(date, time) {
 }
 
 /**
- * Book a slot
+ * Book a slot — matches by professional + date + time
  * @param {string} date
  * @param {string} time
  * @param {string} bookingId
+ * @param {string} [professional]
  * @returns {boolean} Success status
  */
-function bookSlot(date, time, bookingId) {
-  const slot = AvailabilitySlot.findByDateTime(date, time)
+function bookSlot(date, time, bookingId, professional) {
+  const slot = professional
+    ? AvailabilitySlot.findByProfessionalDateTime(professional, date, time)
+    : AvailabilitySlot.findByDateTime(date, time)
   if (slot && slot.available) {
     return AvailabilitySlot.bookSlot(slot.id, bookingId)
   }
