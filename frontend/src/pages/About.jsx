@@ -1,121 +1,12 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '../utils/constants'
-import leaskarPhoto from '../assets/team/leaskar.jpg'
-import jeevanPhoto from '../assets/team/jeevan.png'
-import abijithPhoto from '../assets/team/abijith.png'
-import mohammedPhoto from '../assets/team/mohammed.jpg'
+import { TEAM_DATA } from '../utils/teamData'
 import './About.css'
 
 const WHATSAPP = import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/917358154022'
 const EMAIL = import.meta.env.VITE_CONTACT_EMAIL || 'theeyoucounsellingspace@gmail.com'
 const PHONE = '+91 73581 54022'
-
-// ── Team data (4 Founders) ──────────────────────────────────────────────────
-const TEAM = [
-    {
-        name: 'Jeevan KJ',
-        role: 'Counselling Psychologist',
-        exp: '2+ yrs exp',
-        languages: 'Tamil, English',
-        areas: ['School Counseling', 'Career Guidance'],
-        approach: ['Person-Centered Support', 'Strengths-Based Career Mapping'],
-        photo: jeevanPhoto,
-    },
-    {
-        name: 'Leaskar Paulraj DJ',
-        role: 'Counselling Psychologist',
-        exp: '2+ yrs exp',
-        languages: 'Tamil, English',
-        areas: ['Family Concerns', 'Disability Coping', 'General Stress'],
-        approach: ['CBT', 'PCT', 'Family Counselling'],
-        photo: leaskarPhoto,
-    },
-    {
-        name: 'Abijith KB',
-        role: 'Counselling Psychologist',
-        exp: '2+ yrs exp',
-        languages: 'Tamil, Malayalam, English',
-        areas: ['Work Stress', 'Work-Life Balance', 'Relationships', 'Academics'],
-        approach: ['CBT', 'Person-Centered Therapy', 'Psychoanalytic Therapy'],
-        photo: abijithPhoto,
-    },
-    {
-        name: 'Mohammed Muhaiyadeen M',
-        role: 'Counselling Psychologist',
-        exp: '2+ yrs exp',
-        languages: 'Tamil, English',
-        areas: ['Relationships', 'Identity', 'Work Stress', 'Academics', 'Professional Growth', 'Anxiety', 'Grief'],
-        approach: ['CBT', 'Person-Centered Therapy', 'Couple Counselling'],
-        photo: mohammedPhoto,
-    },
-]
-
-// Deterministic initials avatar colours — one per person, stable
-const AVATAR_GRADIENTS = [
-    'linear-gradient(135deg, #7A9E87 0%, #A6C4AD 100%)',
-    'linear-gradient(135deg, #9E8AB8 0%, #BEB0D4 100%)',
-    'linear-gradient(135deg, #C4975A 0%, #E2BC88 100%)',
-    'linear-gradient(135deg, #7B9EAE 0%, #A8C3CF 100%)',
-    'linear-gradient(135deg, #B8849A 0%, #D4A9BB 100%)',
-]
-
-function TeamCard({ member, index }) {
-    const [expanded, setExpanded] = useState(false)
-    const initials = member.name.split(' ').slice(0, 2).map(w => w[0]).join('')
-    const gradient = AVATAR_GRADIENTS[index % AVATAR_GRADIENTS.length]
-
-    return (
-        <div className={`team-card ${expanded ? 'team-card--open' : ''}`}>
-            {/* Top row */}
-            <div className="team-card-top">
-                {/* Avatar / Photo */}
-                <div className="team-avatar" style={{ background: member.photo ? 'transparent' : gradient }}>
-                    {member.photo
-                        ? <img src={member.photo} alt={member.name} className="team-avatar-img" />
-                        : <span className="team-avatar-initials">{initials}</span>
-                    }
-                </div>
-
-                {/* Identity */}
-                <div className="team-identity">
-                    <h3 className="team-name">{member.name}</h3>
-                    <p className="team-role">{member.role} · {member.exp}</p>
-                    <p className="team-lang">🗣 {member.languages}</p>
-                </div>
-
-                {/* Expand toggle */}
-                <button
-                    className="team-toggle"
-                    onClick={() => setExpanded(e => !e)}
-                    aria-expanded={expanded}
-                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${member.name}'s profile`}
-                >
-                    <span className="team-toggle-icon">{expanded ? '−' : '+'}</span>
-                </button>
-            </div>
-
-            {/* Area chips — always visible */}
-            <div className="team-areas">
-                {member.areas.map(a => (
-                    <span key={a} className="team-chip">{a}</span>
-                ))}
-            </div>
-
-            {/* Expanded: Approach */}
-            {expanded && (
-                <div className="team-approach">
-                    <p className="team-approach-label">Therapeutic approach</p>
-                    <div className="team-approach-tags">
-                        {member.approach.map(a => (
-                            <span key={a} className="team-approach-tag">{a}</span>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    )
-}
 
 function About() {
     const navigate = useNavigate()
@@ -151,6 +42,25 @@ function About() {
                     of age, background, or circumstance, deserves access to ethical and empathetic
                     psychological support.
                 </p>
+
+                {/* ── Founder portrait grid ── */}
+                <div className="founder-grid">
+                    {TEAM_DATA.map(member => (
+                        <div key={member.name} className="founder-portrait">
+                            <div className="founder-photo-wrap">
+                                {member.photo
+                                    ? <img src={member.photo} alt={member.name} className="founder-photo" />
+                                    : (
+                                        <div className="founder-photo-placeholder">
+                                            <span>{member.name.split(' ').slice(0, 2).map(w => w[0]).join('')}</span>
+                                        </div>
+                                    )
+                                }
+                            </div>
+                            <p className="founder-name">{member.name}</p>
+                        </div>
+                    ))}
+                </div>
             </section>
 
             {/* ── What we believe ────────────────────────────────── */}
@@ -165,20 +75,6 @@ function About() {
                     Every session is guided by professional integrity, confidentiality, and deep
                     respect for your individual experience. You will not be judged here. You will be heard.
                 </p>
-            </section>
-
-            {/* ── Meet the team ───────────────────────────────────── */}
-            <section className="about-section">
-                <h2 className="about-section-title">Meet the team</h2>
-                <p className="about-body" style={{ marginBottom: '1.75rem' }}>
-                    Each of our professionals brings a distinct perspective and a shared commitment to
-                    ethical, empathetic care. Tap any card to learn about their approach.
-                </p>
-                <div className="team-grid">
-                    {TEAM.map((member, i) => (
-                        <TeamCard key={member.name} member={member} index={i} />
-                    ))}
-                </div>
             </section>
 
             {/* ── Who we support ─────────────────────────────────── */}
@@ -208,9 +104,7 @@ function About() {
             {/* ── Contact ─────────────────────────────────────────── */}
             <section className="about-section about-contact">
                 <h2 className="about-section-title">Get in touch</h2>
-                <p className="about-body">
-                    For queries, session rescheduling, or general support:
-                </p>
+                <p className="about-body">For queries, session rescheduling, or general support:</p>
                 <div className="contact-items">
                     <a className="contact-item" href={`tel:${PHONE.replace(/\s/g, '')}`}>
                         <span className="contact-icon" aria-hidden="true">📞</span>

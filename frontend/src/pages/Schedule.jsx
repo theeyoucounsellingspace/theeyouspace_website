@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ROUTES } from '../utils/constants'
-import { fetchSlots, fetchProfessionals } from '../utils/api'
+import { fetchSlots } from '../utils/api'
+import { getTeamMember } from '../utils/teamData'
 import './Schedule.css'
 
 function Schedule() {
@@ -10,9 +11,10 @@ function Schedule() {
   const triageData = location.state?.triageData
 
   const [grouped, setGrouped] = useState({})
-  const [profMap, setProfMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  // Track which card has its approach section expanded
+  const [expanded, setExpanded] = useState({})
 
   useEffect(() => { loadData() }, [])
 
@@ -20,14 +22,7 @@ function Schedule() {
     setLoading(true)
     setError(null)
     try {
-      const [slotData, profList] = await Promise.allSettled([
-        fetchSlots(),
-        fetchProfessionals(),
-      ])
-
-      // Slots — required
-      if (slotData.status === 'rejected') throw new Error(slotData.reason?.message || 'Failed to load slots')
-      const data = slotData.value
+      const data = await fetchSlots()
       if (data.grouped && Object.keys(data.grouped).length > 0) {
         setGrouped(data.grouped)
       } else if (data.slots) {
@@ -39,28 +34,17 @@ function Schedule() {
         })
         setGrouped(manual)
       }
-
-      // Professionals — best-effort
-      if (profList.status === 'fulfilled' && Array.isArray(profList.value)) {
-        const map = {}
-        profList.value.forEach(p => { if (p.name) map[p.name.toLowerCase()] = p })
-        setProfMap(map)
-      }
     } catch (err) {
-      console.error('Error loading schedule data:', err)
+      console.error('Error loading slots:', err)
       setError(err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const getProInfo = (name) => {
-    if (!name) return null
-    return profMap[name.toLowerCase()] || { name, title: 'Counselling Psychologist', bio: '', specializations: [], areas: [] }
+  const toggleExpand = (name) => {
+    setExpanded(prev => ({ ...prev, [name]: !prev[name] }))
   }
-
-  // Get the earliest (first) slot for a professional
-  const getNextSlot = (slots) => slots?.[0] || null
 
   const handleBookNow = (slot) => {
     navigate(ROUTES.DETAILS_PAYMENT, {
@@ -73,8 +57,8 @@ function Schedule() {
   return (
     <div className="schedule-page">
       <div className="schedule-header">
-        <h1 className="schedule-title">Choose your professional</h1>
-        <p className="schedule-subtitle">Select a counsellor and book your first session.</p>
+        <h1 className="schedule-title">Book a session</h1>
+        <p className="schedule-subtitle">Choose a counsellor whose availability works for you.</p>
       </div>
 
       {loading && (
@@ -100,52 +84,70 @@ function Schedule() {
       {!loading && !error && totalSlots > 0 && (
         <div className="schedule-list">
           {Object.entries(grouped).map(([proName, slots]) => {
-            const bio = getProInfo(proName)
-            const nextSlot = getNextSlot(slots)
+            const info = getTeamMember(proName)
+            const isOpen = !!expanded[proName]
+            const nextSlot = slots[0]
 
             return (
-              <div key={proName} className="pro-card">
-                {/* Top row: title + name + avatar */}
+              <div key={proName} className={`pro-card ${isOpen ? 'pro-card--open' : ''}`}>
+
+                {/* ── Top: photo + identity + expand toggle ── */}
                 <div className="pro-card-top">
+                  {/* Avatar */}
+                  <div className="pro-card-avatar">
+                    {info?.photo
+                      ? <img src={info.photo} alt={proName} className="pro-card-avatar-img" />
+                      : <span>{proName.charAt(0)}</span>
+                    }
+                  </div>
+
+                  {/* Identity */}
                   <div className="pro-card-info">
-                    <span className="pro-card-title">{bio?.title || 'Counselling Psychologist'}</span>
                     <h2 className="pro-card-name">{proName}</h2>
-                    {bio?.experience && (
-                      <p className="pro-card-exp">{bio.experience} of experience</p>
+                    <p className="pro-card-role">
+                      {info?.role || 'Counselling Psychologist'}
+                      {info?.exp ? ` · ${info.exp}` : ''}
+                    </p>
+                    {info?.languages && (
+                      <p className="pro-card-lang">🗣 {info.languages}</p>
                     )}
                   </div>
-                  <div className="pro-card-avatar" aria-hidden="true">
-                    <span>{proName.charAt(0)}</span>
+
+                  {/* Expand/collapse */}
+                  {info && (
+                    <button
+                      className="pro-card-toggle"
+                      onClick={() => toggleExpand(proName)}
+                      aria-expanded={isOpen}
+                      aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${proName}'s profile`}
+                    >
+                      <span>{isOpen ? '−' : '+'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* ── Area chips — always visible ── */}
+                {info?.areas?.length > 0 && (
+                  <div className="pro-card-areas">
+                    {info.areas.map(a => (
+                      <span key={a} className="pro-card-chip">{a}</span>
+                    ))}
                   </div>
-                </div>
+                )}
 
-                {/* Details rows */}
-                <div className="pro-card-details">
-                  {bio?.languages && (
-                    <div className="pro-card-row">
-                      <span className="pro-card-label">Speaks</span>
-                      <span className="pro-card-value">{bio.languages}</span>
+                {/* ── Approach — only when expanded ── */}
+                {isOpen && info?.approach?.length > 0 && (
+                  <div className="pro-card-approach">
+                    <p className="pro-card-approach-label">Therapeutic approach</p>
+                    <div className="pro-card-approach-tags">
+                      {info.approach.map(a => (
+                        <span key={a} className="pro-card-approach-tag">{a}</span>
+                      ))}
                     </div>
-                  )}
-                  {bio?.specializations?.length > 0 && (
-                    <div className="pro-card-row pro-card-row--top">
-                      <span className="pro-card-label">Expertise</span>
-                      <div className="pro-card-tags">
-                        {bio.specializations.map(s => (
-                          <span key={s} className="pro-card-tag">{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {bio?.price && (
-                    <div className="pro-card-row">
-                      <span className="pro-card-label">Price</span>
-                      <span className="pro-card-value pro-card-price">₹{bio.price} / 60 min session</span>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                {/* All available slots */}
+                {/* ── All slots grid (secondary) ── */}
                 {slots.length > 1 && (
                   <div className="pro-card-slots">
                     <span className="pro-card-slots-label">All available slots</span>
@@ -165,12 +167,12 @@ function Schedule() {
                   </div>
                 )}
 
-                {/* Footer: next slot + book now */}
+                {/* ── Footer: next slot + BOOK NOW ── */}
                 {nextSlot && (
                   <div className="pro-card-footer">
                     <div className="pro-card-next">
-                      <span className="pro-card-next-label">Next available slot:</span>
-                      <span className="pro-card-next-slot">{nextSlot.date} {nextSlot.time}</span>
+                      <span className="pro-card-next-label">Next available</span>
+                      <span className="pro-card-next-slot">{nextSlot.date} · {nextSlot.time}</span>
                     </div>
                     <button
                       className="pro-book-btn"
@@ -181,6 +183,7 @@ function Schedule() {
                     </button>
                   </div>
                 )}
+
               </div>
             )
           })}
