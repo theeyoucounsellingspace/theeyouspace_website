@@ -48,8 +48,10 @@ export const TEAM_DATA = [
         languages: 'Tamil, English',
         areas: ['Relationships', 'Identity', 'Work Stress', 'Academics', 'Professional Growth', 'Anxiety', 'Grief'],
         approach: ['CBT', 'Person-Centered Therapy', 'Couple Counselling'],
-        photoPosition: 'center 30%', // face slightly larger in photo — pull view down to zoom out
         photo: mohammedPhoto,
+        // His headshot is tighter than the others — contain scales it down to fit the circle properly
+        photoFit: 'contain',
+        photoPosition: 'center 15%',
     },
 ]
 

@@ -53,7 +53,10 @@ function About() {
                                         src={member.photo}
                                         alt={member.name}
                                         className="founder-photo"
-                                        style={{ objectPosition: member.photoPosition || 'top center' }}
+                                        style={{
+                                            objectFit: member.photoFit || 'cover',
+                                            objectPosition: member.photoPosition || 'top center'
+                                        }}
                                     />
                                     : (
                                         <div className="founder-photo-placeholder">

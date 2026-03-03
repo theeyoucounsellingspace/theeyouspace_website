@@ -73,6 +73,7 @@ function Schedule() {
       price: api?.price || '',
       photo,
       photoPosition: local?.photoPosition || null,
+      photoFit: local?.photoFit || 'cover',
     }
   }
 
@@ -131,7 +132,10 @@ function Schedule() {
                         src={info.photo}
                         alt={proName}
                         className="pro-card-avatar-img"
-                        style={{ objectPosition: info.photoPosition || 'top center' }}
+                        style={{
+                          objectFit: info.photoFit || 'cover',
+                          objectPosition: info.photoPosition || 'top center',
+                        }}
                       />
                       : <span>{proName.charAt(0)}</span>
                     }
