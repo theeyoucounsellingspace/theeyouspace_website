@@ -4,6 +4,7 @@ import { ROUTES } from '../utils/constants'
 import leaskarPhoto from '../assets/team/leaskar.jpg'
 import jeevanPhoto from '../assets/team/jeevan.png'
 import abijithPhoto from '../assets/team/abijith.png'
+import mohammedPhoto from '../assets/team/mohammed.jpg'
 import './About.css'
 
 const WHATSAPP = import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/917358154022'
@@ -46,7 +47,7 @@ const TEAM = [
         languages: 'Tamil, English',
         areas: ['Relationships', 'Identity', 'Work Stress', 'Academics', 'Professional Growth', 'Anxiety', 'Grief'],
         approach: ['CBT', 'Person-Centered Therapy', 'Couple Counselling'],
-        photo: null,
+        photo: mohammedPhoto,
     },
 ]
 
