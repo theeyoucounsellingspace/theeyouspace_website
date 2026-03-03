@@ -51,7 +51,7 @@ export const TEAM_DATA = [
         photo: mohammedPhoto,
         // His headshot is tighter than the others — contain scales it down to fit the circle properly
         photoFit: 'contain',
-        photoPosition: 'center 15%',
+        photoPosition: 'center 45%',
     },
 ]
 
