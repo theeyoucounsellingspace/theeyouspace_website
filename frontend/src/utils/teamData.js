@@ -48,6 +48,7 @@ export const TEAM_DATA = [
         languages: 'Tamil, English',
         areas: ['Relationships', 'Identity', 'Work Stress', 'Academics', 'Professional Growth', 'Anxiety', 'Grief'],
         approach: ['CBT', 'Person-Centered Therapy', 'Couple Counselling'],
+        photoPosition: 'center 30%', // face slightly larger in photo — pull view down to zoom out
         photo: mohammedPhoto,
     },
 ]

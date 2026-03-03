@@ -38,6 +38,7 @@ function setProfessionals(professionals) {
             languages: p.languages || '',
             mode: p.mode || '',
             price: p.price || '',
+            photoUrl: p.photoUrl || '',
         })
     }
     _cache = next

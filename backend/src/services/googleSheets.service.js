@@ -113,6 +113,8 @@ function detectColumns(headerCols) {
         languages: lower.findIndex((c) => c.includes('language') || c.includes('speaks') || c.includes('tongue')),
         mode: lower.findIndex((c) => c === 'mode' || c.includes('session mode') || c.includes('online')),
         price: lower.findIndex((c) => c === 'price' || c.includes('fee') || c.includes('rate') || c.includes('amount')),
+        // Photo URL — direct image link (Google Drive, Cloudinary, GitHub raw, etc.)
+        photoUrl: lower.findIndex((c) => c === 'photo url' || c === 'photo' || c === 'image' || c === 'image url' || c === 'photo_url'),
     }
 }
 
@@ -132,6 +134,7 @@ function parseCsvToSlots(csvText) {
     const hasProfessional = cols.professional !== -1
     const hasBioColumns = cols.title !== -1 || cols.bio !== -1 || cols.specializations !== -1 || cols.areas !== -1
         || cols.experience !== -1 || cols.languages !== -1 || cols.mode !== -1 || cols.price !== -1
+        || cols.photoUrl !== -1
 
     if (!hasProfessional) {
         console.warn('[Slot Sync] No "Professional" column found — slots will show without a professional name')
@@ -175,6 +178,7 @@ function parseCsvToSlots(csvText) {
                     languages: cols.languages !== -1 ? (values[cols.languages]?.trim() || '') : '',
                     mode: cols.mode !== -1 ? (values[cols.mode]?.trim() || '') : '',
                     price: cols.price !== -1 ? (values[cols.price]?.trim() || '') : '',
+                    photoUrl: cols.photoUrl !== -1 ? (values[cols.photoUrl]?.trim() || '') : '',
                 })
             }
         } else if (name) {

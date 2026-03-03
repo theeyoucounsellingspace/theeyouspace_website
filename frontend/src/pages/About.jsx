@@ -49,7 +49,12 @@ function About() {
                         <div key={member.name} className="founder-portrait">
                             <div className="founder-photo-wrap">
                                 {member.photo
-                                    ? <img src={member.photo} alt={member.name} className="founder-photo" />
+                                    ? <img
+                                        src={member.photo}
+                                        alt={member.name}
+                                        className="founder-photo"
+                                        style={{ objectPosition: member.photoPosition || 'top center' }}
+                                    />
                                     : (
                                         <div className="founder-photo-placeholder">
                                             <span>{member.name.split(' ').slice(0, 2).map(w => w[0]).join('')}</span>

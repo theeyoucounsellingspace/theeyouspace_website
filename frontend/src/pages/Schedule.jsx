@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ROUTES } from '../utils/constants'
-import { fetchSlots } from '../utils/api'
+import { fetchSlots, fetchProfessionals } from '../utils/api'
 import { getTeamMember } from '../utils/teamData'
 import './Schedule.css'
 
@@ -11,9 +11,9 @@ function Schedule() {
   const triageData = location.state?.triageData
 
   const [grouped, setGrouped] = useState({})
+  const [apiProfMap, setApiProfMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  // Track which card has its approach section expanded
   const [expanded, setExpanded] = useState({})
 
   useEffect(() => { loadData() }, [])
@@ -22,7 +22,13 @@ function Schedule() {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchSlots()
+      const [slotResult, profResult] = await Promise.allSettled([
+        fetchSlots(),
+        fetchProfessionals(),
+      ])
+
+      if (slotResult.status === 'rejected') throw new Error(slotResult.reason?.message || 'Failed to load slots')
+      const data = slotResult.value
       if (data.grouped && Object.keys(data.grouped).length > 0) {
         setGrouped(data.grouped)
       } else if (data.slots) {
@@ -34,17 +40,42 @@ function Schedule() {
         })
         setGrouped(manual)
       }
+
+      if (profResult.status === 'fulfilled' && Array.isArray(profResult.value)) {
+        const map = {}
+        profResult.value.forEach(p => { if (p.name) map[p.name.toLowerCase()] = p })
+        setApiProfMap(map)
+      }
     } catch (err) {
-      console.error('Error loading slots:', err)
+      console.error('Error loading schedule data:', err)
       setError(err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const toggleExpand = (name) => {
-    setExpanded(prev => ({ ...prev, [name]: !prev[name] }))
+  /**
+   * Photo priority: sheet URL → bundled photo (founders) → null (initials)
+   * Info priority: API data (sheet) → local teamData fallback
+   */
+  const getMergedInfo = (proName) => {
+    const api = apiProfMap[proName.toLowerCase()] || null
+    const local = getTeamMember(proName)
+    const photo = (api?.photoUrl) || local?.photo || null
+
+    return {
+      role: api?.title || local?.role || 'Counselling Psychologist',
+      exp: api?.experience || local?.exp || '',
+      languages: api?.languages || local?.languages || '',
+      areas: api?.areas?.length ? api.areas : (local?.areas || []),
+      approach: local?.approach || [],
+      price: api?.price || '',
+      photo,
+      photoPosition: local?.photoPosition || null,
+    }
   }
+
+  const toggleExpand = (name) => setExpanded(prev => ({ ...prev, [name]: !prev[name] }))
 
   const handleBookNow = (slot) => {
     navigate(ROUTES.DETAILS_PAYMENT, {
@@ -84,81 +115,70 @@ function Schedule() {
       {!loading && !error && totalSlots > 0 && (
         <div className="schedule-list">
           {Object.entries(grouped).map(([proName, slots]) => {
-            const info = getTeamMember(proName)
+            const info = getMergedInfo(proName)
             const isOpen = !!expanded[proName]
             const nextSlot = slots[0]
 
             return (
               <div key={proName} className={`pro-card ${isOpen ? 'pro-card--open' : ''}`}>
 
-                {/* ── Top: photo + identity + expand toggle ── */}
+                {/* Top: photo + identity + toggle */}
                 <div className="pro-card-top">
-                  {/* Avatar */}
                   <div className="pro-card-avatar">
-                    {info?.photo
-                      ? <img src={info.photo} alt={proName} className="pro-card-avatar-img" />
+                    {info.photo
+                      ? <img
+                        src={info.photo}
+                        alt={proName}
+                        className="pro-card-avatar-img"
+                        style={{ objectPosition: info.photoPosition || 'top center' }}
+                      />
                       : <span>{proName.charAt(0)}</span>
                     }
                   </div>
 
-                  {/* Identity */}
                   <div className="pro-card-info">
                     <h2 className="pro-card-name">{proName}</h2>
                     <p className="pro-card-role">
-                      {info?.role || 'Counselling Psychologist'}
-                      {info?.exp ? ` · ${info.exp}` : ''}
+                      {info.role}{info.exp ? ` · ${info.exp}` : ''}
                     </p>
-                    {info?.languages && (
-                      <p className="pro-card-lang">🗣 {info.languages}</p>
-                    )}
+                    {info.languages && <p className="pro-card-lang">🗣 {info.languages}</p>}
+                    {info.price && <p className="pro-card-lang">₹{info.price} / session</p>}
                   </div>
 
-                  {/* Expand/collapse */}
-                  {info && (
-                    <button
-                      className="pro-card-toggle"
-                      onClick={() => toggleExpand(proName)}
-                      aria-expanded={isOpen}
-                      aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${proName}'s profile`}
-                    >
-                      <span>{isOpen ? '−' : '+'}</span>
-                    </button>
-                  )}
+                  <button
+                    className="pro-card-toggle"
+                    onClick={() => toggleExpand(proName)}
+                    aria-expanded={isOpen}
+                    aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${proName}'s profile`}
+                  >
+                    <span>{isOpen ? '−' : '+'}</span>
+                  </button>
                 </div>
 
-                {/* ── Area chips — always visible ── */}
-                {info?.areas?.length > 0 && (
+                {/* Area chips */}
+                {info.areas.length > 0 && (
                   <div className="pro-card-areas">
-                    {info.areas.map(a => (
-                      <span key={a} className="pro-card-chip">{a}</span>
-                    ))}
+                    {info.areas.map(a => <span key={a} className="pro-card-chip">{a}</span>)}
                   </div>
                 )}
 
-                {/* ── Approach — only when expanded ── */}
-                {isOpen && info?.approach?.length > 0 && (
+                {/* Approach (expanded) */}
+                {isOpen && info.approach.length > 0 && (
                   <div className="pro-card-approach">
                     <p className="pro-card-approach-label">Therapeutic approach</p>
                     <div className="pro-card-approach-tags">
-                      {info.approach.map(a => (
-                        <span key={a} className="pro-card-approach-tag">{a}</span>
-                      ))}
+                      {info.approach.map(a => <span key={a} className="pro-card-approach-tag">{a}</span>)}
                     </div>
                   </div>
                 )}
 
-                {/* ── All slots grid (secondary) ── */}
+                {/* All slots grid */}
                 {slots.length > 1 && (
                   <div className="pro-card-slots">
                     <span className="pro-card-slots-label">All available slots</span>
                     <div className="pro-card-slots-grid">
                       {slots.map(slot => (
-                        <button
-                          key={slot.id}
-                          className="slot-pill"
-                          onClick={() => handleBookNow(slot)}
-                          aria-label={`Book ${proName} on ${slot.date} at ${slot.time}`}
-                        >
+                        <button key={slot.id} className="slot-pill" onClick={() => handleBookNow(slot)}>
                           <span className="slot-pill-date">{slot.date}</span>
                           <span className="slot-pill-time">{slot.time}</span>
                         </button>
@@ -167,23 +187,18 @@ function Schedule() {
                   </div>
                 )}
 
-                {/* ── Footer: next slot + BOOK NOW ── */}
+                {/* Footer: next slot + BOOK NOW */}
                 {nextSlot && (
                   <div className="pro-card-footer">
                     <div className="pro-card-next">
                       <span className="pro-card-next-label">Next available</span>
                       <span className="pro-card-next-slot">{nextSlot.date} · {nextSlot.time}</span>
                     </div>
-                    <button
-                      className="pro-book-btn"
-                      onClick={() => handleBookNow(nextSlot)}
-                      aria-label={`Book session with ${proName}`}
-                    >
+                    <button className="pro-book-btn" onClick={() => handleBookNow(nextSlot)}>
                       BOOK NOW
                     </button>
                   </div>
                 )}
-
               </div>
             )
           })}
