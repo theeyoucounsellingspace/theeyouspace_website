@@ -100,16 +100,17 @@ function parseCsvLine(line) {
 function detectColumns(headerCols) {
     const lower = headerCols.map((c) => c.toLowerCase())
     return {
-        professional: lower.findIndex((c) => c.includes('professional') || c.includes('counsellor') || c.includes('counselor') || c.includes('name')),
+        professional: lower.findIndex((c) => c.includes('professional') || c.includes('counsellor') || c.includes('counselor') || c === 'name'),
         date: lower.findIndex((c) => c.includes('date')),
         time: lower.findIndex((c) => c.includes('time')),
         // Optional bio columns — if present, professionals cache is auto-built
-        title: lower.findIndex((c) => c === 'title' || c === 'designation'),
+        title: lower.findIndex((c) => c === 'title' || c === 'designation' || c === 'role'),
         bio: lower.findIndex((c) => c === 'bio' || c === 'about' || c === 'description'),
-        specializations: lower.findIndex((c) => c.includes('specializ') || c.includes('expertise') || c.includes('approach')),
-        areas: lower.findIndex((c) => c === 'areas' || c.includes('focus')),
+        specializations: lower.findIndex((c) => c.includes('specializ') || c.includes('expertise')),
+        areas: lower.findIndex((c) => c === 'areas' || c.includes('focus') || c === 'area of focus'),
         // Card display columns
-        experience: lower.findIndex((c) => c.includes('experience') || c.includes('exp')),
+        approach: lower.findIndex((c) => c === 'approach' || c.includes('therapeutic') || c.includes('modality')),
+        experience: lower.findIndex((c) => c === 'experience' || c === 'exp' || c === 'years'),
         languages: lower.findIndex((c) => c.includes('language') || c.includes('speaks') || c.includes('tongue')),
         mode: lower.findIndex((c) => c === 'mode' || c.includes('session mode') || c.includes('online')),
         price: lower.findIndex((c) => c === 'price' || c.includes('fee') || c.includes('rate') || c.includes('amount')),
@@ -160,26 +161,49 @@ function parseCsvToSlots(csvText) {
         const professional = name || 'General'
 
         // ── Build professionals cache from bio columns ──────────────────
-        if (name && hasBioColumns) {
+        // Guard: skip placeholder/empty names
+        const INVALID_NAMES = ['na', 'n/a', '-', 'none', 'tbd', 'tba', 'null', 'undefined']
+        if (name && hasBioColumns && !INVALID_NAMES.includes(name.toLowerCase())) {
             const key = name.toLowerCase()
             if (!profMap.has(key)) {
-                // Parse comma-separated lists for specializations and areas
                 const rawSpecializations = cols.specializations !== -1 ? values[cols.specializations]?.trim() : ''
                 const rawAreas = cols.areas !== -1 ? values[cols.areas]?.trim() : ''
+                const rawApproach = cols.approach !== -1 ? values[cols.approach]?.trim() : ''
 
-                profMap.set(key, {
+                const incoming = {
                     name,
                     title: cols.title !== -1 ? (values[cols.title]?.trim() || '') : '',
                     bio: cols.bio !== -1 ? (values[cols.bio]?.trim() || '') : '',
                     specializations: rawSpecializations ? rawSpecializations.split(',').map((s) => s.trim()).filter(Boolean) : [],
                     areas: rawAreas ? rawAreas.split(',').map((s) => s.trim()).filter(Boolean) : [],
+                    approach: rawApproach ? rawApproach.split(',').map((s) => s.trim()).filter(Boolean) : [],
                     // Card display fields
                     experience: cols.experience !== -1 ? (values[cols.experience]?.trim() || '') : '',
                     languages: cols.languages !== -1 ? (values[cols.languages]?.trim() || '') : '',
                     mode: cols.mode !== -1 ? (values[cols.mode]?.trim() || '') : '',
                     price: cols.price !== -1 ? (values[cols.price]?.trim() || '') : '',
                     photoUrl: cols.photoUrl !== -1 ? (values[cols.photoUrl]?.trim() || '') : '',
-                })
+                }
+
+                // Richest-row wins: merge with any existing entry, preferring non-empty values
+                const key = name.toLowerCase()
+                if (!profMap.has(key)) {
+                    profMap.set(key, incoming)
+                } else {
+                    const existing = profMap.get(key)
+                    const merged = {}
+                    for (const field of Object.keys(incoming)) {
+                        const inc = incoming[field]
+                        const ex = existing[field]
+                        // Arrays: take the longer one; strings: take the non-empty one
+                        if (Array.isArray(inc)) {
+                            merged[field] = inc.length >= (ex?.length || 0) ? inc : ex
+                        } else {
+                            merged[field] = inc || ex || ''
+                        }
+                    }
+                    profMap.set(key, merged)
+                }
             }
         } else if (name) {
             // No bio columns — still register the professional by name

@@ -68,7 +68,8 @@ function Schedule() {
       exp: api?.experience || local?.exp || '',
       languages: api?.languages || local?.languages || '',
       areas: api?.areas?.length ? api.areas : (local?.areas || []),
-      approach: local?.approach || [],
+      // Approach: API wins if sheet has it, else fall back to teamData hardcoded
+      approach: api?.approach?.length ? api.approach : (local?.approach || []),
       price: api?.price || '',
       photo,
       photoPosition: local?.photoPosition || null,

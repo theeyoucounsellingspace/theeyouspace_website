@@ -17,7 +17,7 @@ router.get('/', (req, res) => {
         success: true,
         loaded: isLoaded(),
         lastSyncAt: getLastSyncAt(),
-        count: professionals.count,
+        count: professionals.length,
         professionals,
     })
 })

@@ -33,6 +33,7 @@ function setProfessionals(professionals) {
             bio: p.bio || '',
             specializations: Array.isArray(p.specializations) ? p.specializations : [],
             areas: Array.isArray(p.areas) ? p.areas : [],
+            approach: Array.isArray(p.approach) ? p.approach : [],
             // Card display fields
             experience: p.experience || '',
             languages: p.languages || '',
