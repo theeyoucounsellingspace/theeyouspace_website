@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '../utils/constants'
 import './About.css'
@@ -7,13 +7,126 @@ const WHATSAPP = import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/9173581540
 const EMAIL = import.meta.env.VITE_CONTACT_EMAIL || 'theeyoucounsellingspace@gmail.com'
 const PHONE = '+91 73581 54022'
 
+// ── Team data ───────────────────────────────────────────────────────────────
+const TEAM = [
+    {
+        name: 'Mohammed Muhaiyadeen M',
+        role: 'Counselling Psychologist',
+        exp: '2+ yrs exp',
+        languages: 'Tamil, English',
+        areas: ['Relationships', 'Identity', 'Work Stress', 'Academics', 'Professional Growth', 'Anxiety', 'Grief'],
+        approach: ['CBT', 'Person-Centered Therapy', 'Couple Counselling'],
+        photo: null, // replace with import or URL when photo is ready
+    },
+    {
+        name: 'Leaskar Paulraj DJ',
+        role: 'Counselling Psychologist',
+        exp: '2+ yrs exp',
+        languages: 'Tamil, English',
+        areas: ['Family Concerns', 'Disability Coping', 'General Stress'],
+        approach: ['CBT', 'PCT', 'Family Counselling'],
+        photo: null,
+    },
+    {
+        name: 'Jeevan KJ',
+        role: 'Counselling Psychologist',
+        exp: '2+ yrs exp',
+        languages: 'Tamil, English',
+        areas: ['School Counseling', 'Career Guidance'],
+        approach: ['Person-Centered Support', 'Strengths-Based Career Mapping'],
+        photo: null,
+    },
+    {
+        name: 'Abijith KB',
+        role: 'Counselling Psychologist',
+        exp: '2+ yrs exp',
+        languages: 'Tamil, Malayalam, English',
+        areas: ['Work Stress', 'Work-Life Balance', 'Relationships', 'Academics'],
+        approach: ['CBT', 'Person-Centered Therapy', 'Psychoanalytic Therapy'],
+        photo: null,
+    },
+    {
+        name: 'Joan Ana',
+        role: 'Counselling Psychologist',
+        exp: '1.5+ yrs exp',
+        languages: 'Tamil, English',
+        areas: ['Anxiety', 'Grief', 'Identity', 'Social Anxiety', 'Life Transitions'],
+        approach: ['CBT', 'Mindfulness', 'Motivational Interviewing', 'Trauma-Informed Care'],
+        photo: null,
+    },
+]
+
+// Deterministic initials avatar colours — one per person, stable
+const AVATAR_GRADIENTS = [
+    'linear-gradient(135deg, #7A9E87 0%, #A6C4AD 100%)',
+    'linear-gradient(135deg, #9E8AB8 0%, #BEB0D4 100%)',
+    'linear-gradient(135deg, #C4975A 0%, #E2BC88 100%)',
+    'linear-gradient(135deg, #7B9EAE 0%, #A8C3CF 100%)',
+    'linear-gradient(135deg, #B8849A 0%, #D4A9BB 100%)',
+]
+
+function TeamCard({ member, index }) {
+    const [expanded, setExpanded] = useState(false)
+    const initials = member.name.split(' ').slice(0, 2).map(w => w[0]).join('')
+    const gradient = AVATAR_GRADIENTS[index % AVATAR_GRADIENTS.length]
+
+    return (
+        <div className={`team-card ${expanded ? 'team-card--open' : ''}`}>
+            {/* Top row */}
+            <div className="team-card-top">
+                {/* Avatar / Photo */}
+                <div className="team-avatar" style={{ background: member.photo ? 'transparent' : gradient }}>
+                    {member.photo
+                        ? <img src={member.photo} alt={member.name} className="team-avatar-img" />
+                        : <span className="team-avatar-initials">{initials}</span>
+                    }
+                </div>
+
+                {/* Identity */}
+                <div className="team-identity">
+                    <h3 className="team-name">{member.name}</h3>
+                    <p className="team-role">{member.role} · {member.exp}</p>
+                    <p className="team-lang">🗣 {member.languages}</p>
+                </div>
+
+                {/* Expand toggle */}
+                <button
+                    className="team-toggle"
+                    onClick={() => setExpanded(e => !e)}
+                    aria-expanded={expanded}
+                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${member.name}'s profile`}
+                >
+                    <span className="team-toggle-icon">{expanded ? '−' : '+'}</span>
+                </button>
+            </div>
+
+            {/* Area chips — always visible */}
+            <div className="team-areas">
+                {member.areas.map(a => (
+                    <span key={a} className="team-chip">{a}</span>
+                ))}
+            </div>
+
+            {/* Expanded: Approach */}
+            {expanded && (
+                <div className="team-approach">
+                    <p className="team-approach-label">Therapeutic approach</p>
+                    <div className="team-approach-tags">
+                        {member.approach.map(a => (
+                            <span key={a} className="team-approach-tag">{a}</span>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 function About() {
     const navigate = useNavigate()
 
     return (
         <div className="about-page">
-
-
 
             {/* ── Hero ───────────────────────────────────────────── */}
             <section className="about-hero">
@@ -59,6 +172,20 @@ function About() {
                 </p>
             </section>
 
+            {/* ── Meet the team ───────────────────────────────────── */}
+            <section className="about-section">
+                <h2 className="about-section-title">Meet the team</h2>
+                <p className="about-body" style={{ marginBottom: '1.75rem' }}>
+                    Each of our professionals brings a distinct perspective and a shared commitment to
+                    ethical, empathetic care. Tap any card to learn about their approach.
+                </p>
+                <div className="team-grid">
+                    {TEAM.map((member, i) => (
+                        <TeamCard key={member.name} member={member} index={i} />
+                    ))}
+                </div>
+            </section>
+
             {/* ── Who we support ─────────────────────────────────── */}
             <section className="about-section">
                 <h2 className="about-section-title">Who we support</h2>
@@ -100,7 +227,6 @@ function About() {
                     </a>
                 </div>
 
-                {/* ── WhatsApp express — separate, subtler section ── */}
                 <div className="contact-express">
                     <p className="contact-express-heading">Need a faster response?</p>
                     <p className="contact-express-body">
