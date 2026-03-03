@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '../utils/constants'
+import leaskarPhoto from '../assets/team/leaskar.jpg'
 import './About.css'
 
 const WHATSAPP = import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/917358154022'
@@ -25,7 +26,7 @@ const TEAM = [
         languages: 'Tamil, English',
         areas: ['Family Concerns', 'Disability Coping', 'General Stress'],
         approach: ['CBT', 'PCT', 'Family Counselling'],
-        photo: null,
+        photo: leaskarPhoto,
     },
     {
         name: 'Abijith KB',
