@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '../utils/constants'
 import leaskarPhoto from '../assets/team/leaskar.jpg'
+import jeevanPhoto from '../assets/team/jeevan.png'
 import './About.css'
 
 const WHATSAPP = import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/917358154022'
@@ -17,7 +18,7 @@ const TEAM = [
         languages: 'Tamil, English',
         areas: ['School Counseling', 'Career Guidance'],
         approach: ['Person-Centered Support', 'Strengths-Based Career Mapping'],
-        photo: null, // replace with import or URL when photo is ready
+        photo: jeevanPhoto,
     },
     {
         name: 'Leaskar Paulraj DJ',
