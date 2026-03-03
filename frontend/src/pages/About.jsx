@@ -7,15 +7,15 @@ const WHATSAPP = import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/9173581540
 const EMAIL = import.meta.env.VITE_CONTACT_EMAIL || 'theeyoucounsellingspace@gmail.com'
 const PHONE = '+91 73581 54022'
 
-// ── Team data ───────────────────────────────────────────────────────────────
+// ── Team data (4 Founders) ──────────────────────────────────────────────────
 const TEAM = [
     {
-        name: 'Mohammed Muhaiyadeen M',
+        name: 'Jeevan KJ',
         role: 'Counselling Psychologist',
         exp: '2+ yrs exp',
         languages: 'Tamil, English',
-        areas: ['Relationships', 'Identity', 'Work Stress', 'Academics', 'Professional Growth', 'Anxiety', 'Grief'],
-        approach: ['CBT', 'Person-Centered Therapy', 'Couple Counselling'],
+        areas: ['School Counseling', 'Career Guidance'],
+        approach: ['Person-Centered Support', 'Strengths-Based Career Mapping'],
         photo: null, // replace with import or URL when photo is ready
     },
     {
@@ -28,15 +28,6 @@ const TEAM = [
         photo: null,
     },
     {
-        name: 'Jeevan KJ',
-        role: 'Counselling Psychologist',
-        exp: '2+ yrs exp',
-        languages: 'Tamil, English',
-        areas: ['School Counseling', 'Career Guidance'],
-        approach: ['Person-Centered Support', 'Strengths-Based Career Mapping'],
-        photo: null,
-    },
-    {
         name: 'Abijith KB',
         role: 'Counselling Psychologist',
         exp: '2+ yrs exp',
@@ -46,12 +37,12 @@ const TEAM = [
         photo: null,
     },
     {
-        name: 'Joan Ana',
+        name: 'Mohammed Muhaiyadeen M',
         role: 'Counselling Psychologist',
-        exp: '1.5+ yrs exp',
+        exp: '2+ yrs exp',
         languages: 'Tamil, English',
-        areas: ['Anxiety', 'Grief', 'Identity', 'Social Anxiety', 'Life Transitions'],
-        approach: ['CBT', 'Mindfulness', 'Motivational Interviewing', 'Trauma-Informed Care'],
+        areas: ['Relationships', 'Identity', 'Work Stress', 'Academics', 'Professional Growth', 'Anxiety', 'Grief'],
+        approach: ['CBT', 'Person-Centered Therapy', 'Couple Counselling'],
         photo: null,
     },
 ]
