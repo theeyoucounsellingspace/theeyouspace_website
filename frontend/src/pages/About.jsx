@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '../utils/constants'
 import leaskarPhoto from '../assets/team/leaskar.jpg'
 import jeevanPhoto from '../assets/team/jeevan.png'
+import abijithPhoto from '../assets/team/abijith.png'
 import './About.css'
 
 const WHATSAPP = import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/917358154022'
@@ -36,7 +37,7 @@ const TEAM = [
         languages: 'Tamil, Malayalam, English',
         areas: ['Work Stress', 'Work-Life Balance', 'Relationships', 'Academics'],
         approach: ['CBT', 'Person-Centered Therapy', 'Psychoanalytic Therapy'],
-        photo: null,
+        photo: abijithPhoto,
     },
     {
         name: 'Mohammed Muhaiyadeen M',
