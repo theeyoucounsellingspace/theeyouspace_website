@@ -9,18 +9,22 @@ function getAvailableSlots() {
 }
 
 /**
- * Check if a slot is available
+ * Check if a specific slot is still available.
+ * Always pass professional when known — avoids matching a different person's slot.
  * @param {string} date
  * @param {string} time
+ * @param {string} [professional] — use this, always
  * @returns {boolean}
  */
-function isSlotAvailable(date, time) {
-  const slot = AvailabilitySlot.findByDateTime(date, time)
-  return slot && slot.available
+function isSlotAvailable(date, time, professional) {
+  const slot = professional
+    ? AvailabilitySlot.findByProfessionalDateTime(professional, date, time)
+    : AvailabilitySlot.findByDateTime(date, time) // fallback: hope there's no clash
+  return !!(slot && slot.available)
 }
 
 /**
- * Book a slot — matches by professional + date + time
+ * Book a slot — always match by professional + date + time when possible.
  * @param {string} date
  * @param {string} time
  * @param {string} bookingId
@@ -30,7 +34,7 @@ function isSlotAvailable(date, time) {
 function bookSlot(date, time, bookingId, professional) {
   const slot = professional
     ? AvailabilitySlot.findByProfessionalDateTime(professional, date, time)
-    : AvailabilitySlot.findByDateTime(date, time)
+    : AvailabilitySlot.findByDateTime(date, time) // fallback only
   if (slot && slot.available) {
     return AvailabilitySlot.bookSlot(slot.id, bookingId)
   }
@@ -38,13 +42,16 @@ function bookSlot(date, time, bookingId, professional) {
 }
 
 /**
- * Release a booked slot
+ * Release a booked slot — always pass professional to avoid releasing the wrong row.
  * @param {string} date
  * @param {string} time
+ * @param {string} [professional]
  * @returns {boolean} Success status
  */
-function releaseSlot(date, time) {
-  const slot = AvailabilitySlot.findByDateTime(date, time)
+function releaseSlot(date, time, professional) {
+  const slot = professional
+    ? AvailabilitySlot.findByProfessionalDateTime(professional, date, time)
+    : AvailabilitySlot.findByDateTime(date, time)
   if (slot) {
     return AvailabilitySlot.releaseSlot(slot.id)
   }

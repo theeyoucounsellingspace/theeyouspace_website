@@ -16,10 +16,10 @@ async function createPaymentOrder(bookingData) {
 
   console.log(`[Order Creation] Creating order for ${sessionType} session, user: ${bookingData.email}`)
 
-  // Validate slot availability
+  // Validate slot availability — pass professional to prevent cross-professional slot collision
   const { isSlotAvailable } = require('./calendar.service')
-  if (!isSlotAvailable(selectedSlot.date, selectedSlot.time)) {
-    console.error(`[Order Creation] Slot unavailable: ${selectedSlot.date} ${selectedSlot.time}`)
+  if (!isSlotAvailable(selectedSlot.date, selectedSlot.time, selectedSlot.professional || bookingData.professional)) {
+    console.error(`[Order Creation] Slot unavailable: ${selectedSlot.date} ${selectedSlot.time} for ${selectedSlot.professional}`)
     throw new Error('Selected slot is no longer available')
   }
 
@@ -122,11 +122,13 @@ async function verifyAndProcessPayment(paymentData) {
   }
   Booking.updateById(booking.id, updates)
 
-  // Book the slot in memory
+  // Book the slot in memory — pass professional for precise matching
+  const professional = booking.professional || booking.selectedSlot?.professional
   const slotBooked = bookSlot(
     booking.selectedSlot.date,
     booking.selectedSlot.time,
-    booking.id
+    booking.id,
+    professional
   )
 
   if (!slotBooked) {

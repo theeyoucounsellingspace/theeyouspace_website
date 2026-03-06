@@ -164,46 +164,39 @@ function parseCsvToSlots(csvText) {
         // Guard: skip placeholder/empty names
         const INVALID_NAMES = ['na', 'n/a', '-', 'none', 'tbd', 'tba', 'null', 'undefined']
         if (name && hasBioColumns && !INVALID_NAMES.includes(name.toLowerCase())) {
-            const key = name.toLowerCase()
-            if (!profMap.has(key)) {
-                const rawSpecializations = cols.specializations !== -1 ? values[cols.specializations]?.trim() : ''
-                const rawAreas = cols.areas !== -1 ? values[cols.areas]?.trim() : ''
-                const rawApproach = cols.approach !== -1 ? values[cols.approach]?.trim() : ''
+            const profKey = name.toLowerCase() // single declaration — no duplicate
+            const rawSpecializations = cols.specializations !== -1 ? values[cols.specializations]?.trim() : ''
+            const rawAreas = cols.areas !== -1 ? values[cols.areas]?.trim() : ''
+            const rawApproach = cols.approach !== -1 ? values[cols.approach]?.trim() : ''
 
-                const incoming = {
-                    name,
-                    title: cols.title !== -1 ? (values[cols.title]?.trim() || '') : '',
-                    bio: cols.bio !== -1 ? (values[cols.bio]?.trim() || '') : '',
-                    specializations: rawSpecializations ? rawSpecializations.split(',').map((s) => s.trim()).filter(Boolean) : [],
-                    areas: rawAreas ? rawAreas.split(',').map((s) => s.trim()).filter(Boolean) : [],
-                    approach: rawApproach ? rawApproach.split(',').map((s) => s.trim()).filter(Boolean) : [],
-                    // Card display fields
-                    experience: cols.experience !== -1 ? (values[cols.experience]?.trim() || '') : '',
-                    languages: cols.languages !== -1 ? (values[cols.languages]?.trim() || '') : '',
-                    mode: cols.mode !== -1 ? (values[cols.mode]?.trim() || '') : '',
-                    price: cols.price !== -1 ? (values[cols.price]?.trim() || '') : '',
-                    photoUrl: cols.photoUrl !== -1 ? (values[cols.photoUrl]?.trim() || '') : '',
-                }
+            const incoming = {
+                name,
+                title: cols.title !== -1 ? (values[cols.title]?.trim() || '') : '',
+                bio: cols.bio !== -1 ? (values[cols.bio]?.trim() || '') : '',
+                specializations: rawSpecializations ? rawSpecializations.split(',').map((s) => s.trim()).filter(Boolean) : [],
+                areas: rawAreas ? rawAreas.split(',').map((s) => s.trim()).filter(Boolean) : [],
+                approach: rawApproach ? rawApproach.split(',').map((s) => s.trim()).filter(Boolean) : [],
+                experience: cols.experience !== -1 ? (values[cols.experience]?.trim() || '') : '',
+                languages: cols.languages !== -1 ? (values[cols.languages]?.trim() || '') : '',
+                mode: cols.mode !== -1 ? (values[cols.mode]?.trim() || '') : '',
+                price: cols.price !== -1 ? (values[cols.price]?.trim() || '') : '',
+                photoUrl: cols.photoUrl !== -1 ? (values[cols.photoUrl]?.trim() || '') : '',
+            }
 
-                // Richest-row wins: merge with any existing entry, preferring non-empty values
-                const key = name.toLowerCase()
-                if (!profMap.has(key)) {
-                    profMap.set(key, incoming)
-                } else {
-                    const existing = profMap.get(key)
-                    const merged = {}
-                    for (const field of Object.keys(incoming)) {
-                        const inc = incoming[field]
-                        const ex = existing[field]
-                        // Arrays: take the longer one; strings: take the non-empty one
-                        if (Array.isArray(inc)) {
-                            merged[field] = inc.length >= (ex?.length || 0) ? inc : ex
-                        } else {
-                            merged[field] = inc || ex || ''
-                        }
-                    }
-                    profMap.set(key, merged)
+            if (!profMap.has(profKey)) {
+                profMap.set(profKey, incoming)
+            } else {
+                // Richest-row wins: merge, preferring non-empty values
+                const existing = profMap.get(profKey)
+                const merged = {}
+                for (const field of Object.keys(incoming)) {
+                    const inc = incoming[field]
+                    const ex = existing[field]
+                    merged[field] = Array.isArray(inc)
+                        ? (inc.length >= (ex?.length || 0) ? inc : ex)
+                        : (inc || ex || '')
                 }
+                profMap.set(profKey, merged)
             }
         } else if (name) {
             // No bio columns — still register the professional by name

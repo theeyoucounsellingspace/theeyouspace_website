@@ -7,6 +7,7 @@
 let slots = []
 let lastUploadedBy = null
 let lastUploadedAt = null
+let _slotCounter = 0 // monotonic counter — avoids Date.now() collisions when slots load fast
 
 class AvailabilitySlot {
 
@@ -22,15 +23,23 @@ class AvailabilitySlot {
     return slots.find((s) => s.id === id)
   }
 
-  static findByDateTime(date, time) {
-    return slots.find((s) => s.date === date && s.time === time)
+  /**
+   * Find by professional + date + time (stricter match for multi-pro)
+   * Also used by isSlotAvailable — ALWAYS prefer this over findByDateTime
+   * when a professional is known.
+   */
+  static findByProfessionalDateTime(professional, date, time) {
+    return slots.find(
+      (s) => s.professional === professional && s.date === date && s.time === time
+    )
   }
 
   /**
-   * Find by professional + date + time (stricter match for multi-pro)
+   * Find by date + time only — used as fallback when professional is unknown.
+   * Prefer findByProfessionalDateTime when professional is available.
    */
-  static findByProfessionalDateTime(professional, date, time) {
-    return slots.find((s) => s.professional === professional && s.date === date && s.time === time)
+  static findByDateTime(date, time) {
+    return slots.find((s) => s.date === date && s.time === time)
   }
 
   static bookSlot(id, bookingId) {
@@ -67,11 +76,11 @@ class AvailabilitySlot {
       slots.filter((s) => !s.available).map((s) => `${s.professional}|${s.date}|${s.time}`)
     )
 
-    slots = parsedSlots.map((s, i) => {
+    slots = parsedSlots.map((s) => {
       const key = `${s.professional || 'General'}|${s.date}|${s.time}`
       const wasBooked = bookedKeys.has(key)
       return {
-        id: `slot-${Date.now()}-${i}`,
+        id: `slot-${++_slotCounter}`, // monotonic counter — no collisions
         professional: s.professional || 'General',
         date: s.date,
         time: s.time,

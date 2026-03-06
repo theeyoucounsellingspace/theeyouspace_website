@@ -167,8 +167,9 @@ async function removeSlotFromSheet(professional, date, time) {
     }
 
     // 2. Detect column indices from header row
+    // NOTE: Do NOT match 'name' generically — it could match patient name columns
     const header = rows[0].map(h => (h || '').toLowerCase().trim())
-    const proCol = header.findIndex(h => h.includes('professional') || h.includes('counsellor') || h.includes('name'))
+    const proCol = header.findIndex(h => h.includes('professional') || h.includes('counsellor') || h.includes('counselor'))
     const dateCol = header.findIndex(h => h.includes('date'))
     const timeCol = header.findIndex(h => h.includes('time'))
 
@@ -198,11 +199,14 @@ async function removeSlotFromSheet(professional, date, time) {
     }
 
     // 4. Delete the row using batchUpdate
+    // Read the actual sheetId (tab ID) from metadata — don't assume it's 0 or named 'Sheet1'
     const sheetMetaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`
     let gid = 0
+    let tabName = 'Sheet1'
     try {
         const meta = await getJson(sheetMetaUrl, token)
-        gid = meta?.sheets?.[0]?.properties?.sheetId || 0
+        gid = meta?.sheets?.[0]?.properties?.sheetId ?? 0
+        tabName = meta?.sheets?.[0]?.properties?.title || 'Sheet1'
     } catch (_) { /* use default gid=0 */ }
 
     const deleteUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`
