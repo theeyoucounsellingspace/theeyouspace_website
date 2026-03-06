@@ -78,6 +78,53 @@
   gap: 1rem;
 }
 
+/* ── Soft WhatsApp nudge banner ──────────────────────── */
+
+.sched-nudge {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  background: #fdf8f0;
+  border: 1px solid #ecdfc8;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-size: 0.82rem;
+}
+
+.sched-nudge-text {
+  color: var(--color-text-muted);
+  flex: 1;
+  min-width: 120px;
+}
+
+.sched-nudge-link {
+  color: #b07030;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sched-nudge-link:hover {
+  text-decoration: underline;
+}
+
+.sched-nudge-dismiss {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 4px;
+  opacity: 0.6;
+}
+
+.sched-nudge-dismiss:hover {
+  opacity: 1;
+}
+
+
 /* ── Individual professional card ───────────────────── */
 
 .pro-card {

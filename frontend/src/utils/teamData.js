@@ -12,6 +12,7 @@ import leaskarPhoto from '../assets/team/leaskar.jpg'
 import jeevanPhoto from '../assets/team/jeevan.png'
 import abijithPhoto from '../assets/team/abijith.png'
 import mohammedPhoto from '../assets/team/mohammed.jpg'
+import joanPhoto from '../assets/team/joan.jpg'
 
 export const TEAM_DATA = [
     {
@@ -52,6 +53,18 @@ export const TEAM_DATA = [
         // His headshot is tighter than the others — contain scales it down to fit the circle properly
         photoFit: 'contain',
         photoPosition: 'center 45%',
+    },
+    {
+        // Counsellor (not founder) — appears on Schedule page only, not About
+        name: 'Joan Ana',
+        role: 'Counselling Psychologist',
+        exp: '1.5+ yrs exp',
+        languages: 'Tamil, English',
+        areas: ['Anxiety', 'Grief', 'Identity', 'Social Anxiety', 'Life Transitions'],
+        approach: ['CBT', 'Mindfulness', 'Motivational Interviewing', 'Trauma-Informed Care'],
+        photo: joanPhoto,
+        photoFit: 'cover',
+        photoPosition: 'center 20%', // frame face + upper chest, crop busy background
     },
 ]
 

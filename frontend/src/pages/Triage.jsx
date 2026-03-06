@@ -33,11 +33,8 @@ const IMPACTS = [
   { id: 'mood', label: 'My mood' },
 ]
 
-// ── Step 4: Urgency / session type ───────────────────────────────────────────
-const URGENCY = [
-  { id: 'routine', label: 'At my convenience', desc: 'Find a time that fits into your week naturally.', sessionType: 'normal', crisis: false },
-  { id: 'priority', label: 'I need to speak with someone sooner', desc: 'For times when things feel urgent. We\'ll prioritise finding you a slot.', sessionType: 'priority', crisis: false },
-]
+// Pre-filled WhatsApp message — number stays in the URL, never shown on screen
+const WA_LINK = `${import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/917358154022'}?text=${encodeURIComponent('Hi, I need to speak with a counsellor urgently.')}`
 
 const TOTAL = 4
 
@@ -47,6 +44,8 @@ function Triage() {
   const [concern, setConcern] = useState(null)
   const [duration, setDuration] = useState(null)
   const [impacts, setImpacts] = useState([])
+  // Whether the user has clicked "Can't even wait?" — reveals WA button
+  const [showWaGate, setShowWaGate] = useState(false)
 
   const goBack = () => {
     if (step === 1) navigate(ROUTES.HOME)
@@ -61,16 +60,17 @@ function Triage() {
   const toggleImpact = (id) =>
     setImpacts(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id])
 
-  const handleUrgency = (opt) => {
+  const handleUrgency = (sessionType) => {
     const triageData = {
       concern,
       duration,
       impacts,
-      urgencyLevel: opt.id,
-      sessionType: opt.sessionType,
+      urgencyLevel: sessionType,
+      sessionType,
     }
-    if (opt.crisis) navigate(ROUTES.PRIORITY, { state: { triageData } })
-    else navigate(ROUTES.MATCHING, { state: { triageData } })
+    // Go straight to Schedule — all professionals shown by availability.
+    // triageData travels with the booking so the counsellor is prepared.
+    navigate(ROUTES.SCHEDULE, { state: { triageData } })
   }
 
   return (
@@ -155,18 +155,63 @@ function Triage() {
         {step === 4 && (
           <>
             <h2 className="triage-q">How soon do you need support?</h2>
-            <p className="triage-hint">This helps us match you to the right type of session.</p>
-            <div className="triage-list">
-              {URGENCY.map(u => (
+            <p className="triage-hint">Both paths lead to a real session with a trained counsellor.</p>
+
+            {/* Option 1 — Standard */}
+            <button
+              className="triage-option urgency-option"
+              onClick={() => handleUrgency('normal')}
+            >
+              <div className="urgency-header">
+                <span className="opt-label">At my convenience</span>
+                <span className="urgency-badge urgency-badge--standard">Standard rate</span>
+              </div>
+              <span className="opt-desc">Find a time that fits into your week. A slot will be confirmed once you book.</span>
+            </button>
+
+            {/* Option 2 — Priority */}
+            <button
+              className="triage-option urgency-option urgency-option--priority"
+              onClick={() => handleUrgency('priority')}
+            >
+              <div className="urgency-header">
+                <span className="opt-label">I need to speak with someone sooner</span>
+                <span className="urgency-badge urgency-badge--priority">Higher rate · Faster</span>
+              </div>
+              <span className="opt-desc">
+                You'll move up the queue. We'll reach out quickly to confirm your slot.
+              </span>
+            </button>
+
+            {/* WhatsApp gate — number never shown, only revealed after deliberate click */}
+            <div className="urgency-wa-gate">
+              {!showWaGate ? (
                 <button
-                  key={u.id}
-                  className={`triage-option ${u.crisis ? 'crisis' : ''}`}
-                  onClick={() => handleUrgency(u)}
+                  className="urgency-wa-trigger"
+                  onClick={() => setShowWaGate(true)}
+                  aria-expanded="false"
                 >
-                  <span className="opt-label">{u.label}</span>
-                  <span className="opt-desc">{u.desc}</span>
+                  Can't even wait? →
                 </button>
-              ))}
+              ) : (
+                <div className="urgency-wa-panel" role="region" aria-label="WhatsApp contact">
+                  <p className="urgency-wa-text">
+                    Send us a message on WhatsApp — just say <strong>Hi</strong> and we'll respond as fast as we can.
+                  </p>
+                  <a
+                    href={WA_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="urgency-wa-btn"
+                    aria-label="Open WhatsApp to message us"
+                  >
+                    Message us on WhatsApp
+                  </a>
+                  <p className="urgency-wa-disclaimer">
+                    This is not a crisis helpline. If you are in immediate danger, please call 112.
+                  </p>
+                </div>
+              )}
             </div>
           </>
         )}

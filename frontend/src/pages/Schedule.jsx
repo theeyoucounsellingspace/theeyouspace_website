@@ -5,6 +5,8 @@ import { fetchSlots, fetchProfessionals } from '../utils/api'
 import { getTeamMember } from '../utils/teamData'
 import './Schedule.css'
 
+const WA_LINK = `${import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/917358154022'}?text=${encodeURIComponent('Hi, I need to speak with a counsellor urgently.')}`
+
 function Schedule() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -15,6 +17,7 @@ function Schedule() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState({})
+  const [nudgeDismissed, setNudgeDismissed] = useState(false)
 
   useEffect(() => { loadData() }, [])
 
@@ -116,6 +119,16 @@ function Schedule() {
 
       {!loading && !error && totalSlots > 0 && (
         <div className="schedule-list">
+          {/* Dismissible soft nudge — revealed only when user interacts */}
+          {!nudgeDismissed && (
+            <div className="sched-nudge">
+              <span className="sched-nudge-text">Need to speak with someone sooner?</span>
+              <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="sched-nudge-link">
+                Message us →
+              </a>
+              <button className="sched-nudge-dismiss" onClick={() => setNudgeDismissed(true)} aria-label="Dismiss">✕</button>
+            </div>
+          )}
           {Object.entries(grouped).map(([proName, slots]) => {
             const info = getMergedInfo(proName)
             const isOpen = !!expanded[proName]

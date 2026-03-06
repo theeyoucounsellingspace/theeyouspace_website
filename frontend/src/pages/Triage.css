@@ -272,3 +272,113 @@
     margin-bottom: 4rem;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Step 4 — Urgency options with pricing badges
+   ═══════════════════════════════════════════════════════════ */
+
+.urgency-option {
+  gap: 0.5rem;
+}
+
+.urgency-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.urgency-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.urgency-badge--standard {
+  background: #f0ede8;
+  color: #7a6a58;
+  border: 1px solid #ddd6cb;
+}
+
+.urgency-badge--priority {
+  background: #fff3e8;
+  color: #b07030;
+  border: 1px solid #f0d0a0;
+}
+
+/* Priority option gets a warm left accent */
+.urgency-option--priority {
+  border-left: 3px solid #c8882e;
+}
+
+/* ── WhatsApp gate — hidden until user clicks ── */
+
+.urgency-wa-gate {
+  margin-top: 1.75rem;
+  text-align: center;
+}
+
+/* The text link that reveals the panel */
+.urgency-wa-trigger {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0.25rem 0;
+  transition: color 0.2s;
+}
+
+.urgency-wa-trigger:hover {
+  color: var(--color-text);
+}
+
+/* The revealed panel */
+.urgency-wa-panel {
+  background: #f7f3ee;
+  border: 1px solid #e0d8cf;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  animation: triageSlide 0.25s ease both;
+  text-align: left;
+}
+
+.urgency-wa-text {
+  font-size: 0.88rem;
+  color: var(--color-text);
+  line-height: 1.55;
+  margin: 0 0 0.85rem;
+}
+
+.urgency-wa-btn {
+  display: inline-block;
+  background: #25d366;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 999px;
+  padding: 0.55rem 1.25rem;
+  transition: background 0.2s;
+}
+
+.urgency-wa-btn:hover {
+  background: #1eb356;
+}
+
+.urgency-wa-disclaimer {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin: 0.75rem 0 0;
+  line-height: 1.5;
+}

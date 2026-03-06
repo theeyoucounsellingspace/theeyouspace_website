@@ -291,6 +291,9 @@ function DetailsPayment() {
               >
                 {submitting ? 'Processing...' : 'Continue to payment'}
               </Button>
+              <p className="dp-fine-print">
+                Thee You Space is an outpatient counselling service and is not a substitute for emergency psychiatric care. If you are in immediate danger, please visit your nearest emergency room or call 112.
+              </p>
             </div>
           </>
         )}
