@@ -3,7 +3,7 @@ const { getPricing } = require('../utils/pricing.service')
 const { SESSION_TYPES, PAYMENT_STATUS, BOOKING_STATUS } = require('../utils/constants')
 const Booking = require('../models/Booking')
 const { bookSlot, releaseSlot } = require('./calendar.service')
-const { sendBookingConfirmation } = require('./email.service')
+const { sendBookingConfirmation, sendSessionPrepEmail } = require('./email.service')
 const { removeSlotFromSheet } = require('./sheetWriteback.service')
 
 /**
@@ -89,8 +89,9 @@ async function verifyAndProcessPayment(paymentData) {
   }
 
   // IDEMPOTENCY: Check if payment already processed
+  // If so, return without re-sending emails (webhook may re-deliver)
   if (booking.paymentStatus === PAYMENT_STATUS.SUCCESS) {
-    console.log(`[Payment Verification] Payment already processed for booking: ${booking.id}`)
+    console.log(`[Payment Verification] Payment already processed for booking: ${booking.id} — skipping email re-send`)
     return booking.toJSON()
   }
 
@@ -150,12 +151,18 @@ async function verifyAndProcessPayment(paymentData) {
     })
   }
 
-  // Send confirmation email (non-blocking)
+  // Send emails non-blocking — must not delay or break the payment response
   const updatedBooking = Booking.findById(booking.id)
 
-  // Don't await - email sending should not block the response
-  sendBookingConfirmation(updatedBooking).catch(err => {
-    console.error(`[Email] Failed to send confirmation for booking ${booking.id}:`, err.message)
+  Promise.allSettled([
+    sendBookingConfirmation(updatedBooking),
+    sendSessionPrepEmail(updatedBooking),
+  ]).then(results => {
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        console.error(`[Email] Email ${i === 0 ? 'patient-confirmation' : 'session-prep'} failed for booking ${booking.id}:`, r.reason?.message)
+      }
+    })
   })
 
   console.log(`[Booking Confirmation] Booking ${booking.id} confirmed successfully`)

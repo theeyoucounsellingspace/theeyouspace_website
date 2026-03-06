@@ -11,13 +11,17 @@ class Booking {
     this.name = data.name
     this.email = data.email
     this.phone = data.phone || null
-    this.selectedSlot = data.selectedSlot // { date, time }
-    this.pricing = data.pricing // { baseAmount, platformFee, totalAmount }
+    // professional — pulled from slot data or top-level field, normalised to string
+    this.professional = data.selectedSlot?.professional || data.professional || null
+    this.selectedSlot = data.selectedSlot // { date, time, professional }
+    this.pricing = data.pricing // { displayAmount, totalAmount, currency }
     this.paymentMethod = data.paymentMethod // 'card' or 'upi'
     this.razorpayOrderId = data.razorpayOrderId || null
     this.razorpayPaymentId = data.razorpayPaymentId || null
     this.paymentStatus = data.paymentStatus || 'pending'
     this.bookingStatus = data.bookingStatus || 'pending'
+    // Triage data — stored as-is, used for session prep email and counsellor notes
+    this.triageData = data.triageData || null
     this.createdAt = new Date().toISOString()
     this.updatedAt = new Date().toISOString()
   }
@@ -61,11 +65,15 @@ class Booking {
       name: this.name,
       email: this.email,
       phone: this.phone,
+      professional: this.professional,
       selectedSlot: this.selectedSlot,
       pricing: this.pricing,
       paymentMethod: this.paymentMethod,
       paymentStatus: this.paymentStatus,
       bookingStatus: this.bookingStatus,
+      triageData: this.triageData,
+      razorpayOrderId: this.razorpayOrderId,
+      razorpayPaymentId: this.razorpayPaymentId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     }
