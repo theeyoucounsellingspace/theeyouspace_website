@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer')
-
+const { CONCERN_LABELS, DURATION_LABELS, IMPACT_LABELS, label, labelList } = require('../utils/triageLabels')
 // Configure email transporter
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -11,34 +11,6 @@ const transporter = nodemailer.createTransport({
   },
 })
 
-// ── Human-readable label maps (matches Triage.jsx option IDs) ─────────────────
-
-const CONCERN_LABELS = {
-  anxiety_stress: 'Anxiety & Stress',
-  depression_mood: 'Low Mood',
-  relationship_family: 'Relationships & Family',
-  work_academics: 'Work & Academics',
-  grief_loss: 'Grief & Loss',
-  trauma_regret: 'Trauma & Regret',
-  self_identity: 'Self & Identity',
-  general: 'Exploring / Not sure yet',
-}
-
-const DURATION_LABELS = {
-  days: 'Just started (a few days)',
-  weeks: 'A few weeks (2–6 weeks)',
-  months: 'A few months (2–6 months)',
-  longer: 'Over 6 months',
-}
-
-const IMPACT_LABELS = {
-  sleep: 'Sleep',
-  work_school: 'Work or studies',
-  relationships: 'Relationships',
-  daily_routine: 'Daily routine',
-  physical: 'Body & health',
-  mood: 'Mood',
-}
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 const BASE = 'font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 2rem; background-color: #FDFBF7; color: #2A2520;'
@@ -95,8 +67,10 @@ async function sendBookingConfirmation(booking) {
         </table>
       </div>
 
-      <p style="font-size: 0.95rem; line-height: 1.75; color: #5A5248; margin-bottom: 2rem;">
-        If you need to reschedule or have any questions, reply to this email or reach us at
+      <p style="font-size: 0.9rem; line-height: 1.75; color: #5A5248; margin-bottom: 0.5rem;">
+        To reschedule, reply to this email with your Booking ID
+        (<strong>${booking.id}</strong>) at least 24 hours before your session.
+        For anything else, reach us at
         <a href="mailto:${process.env.SMTP_USER}" style="color: #7a6e6b;">${process.env.SMTP_USER}</a>.
       </p>
 

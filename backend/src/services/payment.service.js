@@ -4,7 +4,7 @@ const { SESSION_TYPES, PAYMENT_STATUS, BOOKING_STATUS } = require('../utils/cons
 const Booking = require('../models/Booking')
 const { bookSlot, releaseSlot } = require('./calendar.service')
 const { sendBookingConfirmation, sendSessionPrepEmail } = require('./email.service')
-const { removeSlotFromSheet } = require('./sheetWriteback.service')
+const { removeSlotFromSheet, appendBookingToSheet } = require('./sheetWriteback.service')
 
 /**
  * Create a payment order for booking
@@ -153,16 +153,18 @@ async function verifyAndProcessPayment(paymentData) {
     })
   }
 
-  // Send emails non-blocking — must not delay or break the payment response
+  // Fire all three non-blocking side-effects in parallel — must not delay or break the payment response
   const updatedBooking = Booking.findById(booking.id)
 
   Promise.allSettled([
     sendBookingConfirmation(updatedBooking),
     sendSessionPrepEmail(updatedBooking),
+    appendBookingToSheet(updatedBooking),
   ]).then(results => {
+    const labels = ['patient-confirmation-email', 'session-prep-email', 'sheet-writeback']
     results.forEach((r, i) => {
       if (r.status === 'rejected') {
-        console.error(`[Email] Email ${i === 0 ? 'patient-confirmation' : 'session-prep'} failed for booking ${booking.id}:`, r.reason?.message)
+        console.error(`[Post-Payment] ${labels[i]} failed for booking ${booking.id}:`, r.reason?.message)
       }
     })
   })

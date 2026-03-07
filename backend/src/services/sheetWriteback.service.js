@@ -235,4 +235,188 @@ async function removeSlotFromSheet(professional, date, time) {
     }
 }
 
-module.exports = { removeSlotFromSheet }
+
+module.exports = { removeSlotFromSheet, appendBookingToSheet }
+
+// ─── Booking Writeback ────────────────────────────────────────────────────────
+
+const { label, labelList, CONCERN_LABELS, DURATION_LABELS, IMPACT_LABELS } = require('../utils/triageLabels')
+
+/** Column headers for each professional's tab */
+const BOOKING_HEADERS = [
+    'Booking ID', 'Patient Name', 'Email', 'Phone',
+    'Date', 'Time', 'Session Type',
+    'Primary Concern', 'Duration', 'Affected Areas', 'First Session?',
+    'Booking Source', 'Status', 'Notes', 'Confirmed At',
+]
+
+/** Column headers for the All Bookings aggregate tab (prepends Professional) */
+const ALL_BOOKINGS_HEADERS = ['Professional', ...BOOKING_HEADERS]
+
+/**
+ * Sanitise a professional name to be a valid Google Sheets tab title.
+ * Sheets forbids: [ ] : * ? / \  and max 100 chars.
+ */
+function toTabName(name) {
+    return (name || 'Unknown')
+        .replace(/[\[\]:*?/\\]/g, '')
+        .trim()
+        .slice(0, 95)
+}
+
+/**
+ * List all tab titles in the sheet.
+ * Returns Map<title, sheetId(gid)>
+ */
+async function listTabs(sheetId, token) {
+    const meta = await getJson(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`,
+        token
+    )
+    if (meta.error) throw new Error(`listTabs: ${meta.error.message}`)
+    const map = new Map()
+    for (const s of (meta.sheets || [])) {
+        map.set(s.properties.title, s.properties.sheetId)
+    }
+    return map
+}
+
+/**
+ * Create a new tab, write headers to row 1, return the new gid.
+ */
+async function createTabWithHeaders(sheetId, token, tabTitle, headers) {
+    // 1. Add the sheet tab
+    const addResp = await postJson(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`,
+        token,
+        { requests: [{ addSheet: { properties: { title: tabTitle } } }] }
+    )
+    if (addResp.error) throw new Error(`createTab "${tabTitle}": ${addResp.error.message}`)
+    const newGid = addResp.replies?.[0]?.addSheet?.properties?.sheetId
+
+    // 2. Write header row
+    await putJson(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabTitle + '!A1')}?valueInputOption=RAW`,
+        token,
+        { range: `${tabTitle}!A1`, majorDimension: 'ROWS', values: [headers] }
+    )
+    console.log(`[SheetWriteback] Created tab "${tabTitle}" with ${headers.length} columns`)
+    return newGid
+}
+
+/**
+ * Append a single row to an existing tab (auto-finds next empty row).
+ */
+async function appendRow(sheetId, token, tabTitle, values) {
+    const range = `${tabTitle}!A:A`
+    const resp = await postJson(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+        token,
+        { range, majorDimension: 'ROWS', values: [values] }
+    )
+    if (resp.error) throw new Error(`appendRow to "${tabTitle}": ${resp.error.message}`)
+    return resp
+}
+
+/**
+ * PUT helper (for writing values — Sheets API uses PUT for updates)
+ */
+async function putJson(url, token, body) {
+    const bodyStr = JSON.stringify(body)
+    return new Promise((resolve, reject) => {
+        const parsed = new URL(url)
+        const req = https.request({
+            hostname: parsed.hostname,
+            path: parsed.pathname + parsed.search,
+            method: 'PUT',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(bodyStr),
+            },
+        }, (res) => {
+            let d = ''; res.on('data', c => d += c)
+            res.on('end', () => { try { resolve(JSON.parse(d)) } catch { resolve(d) } })
+        })
+        req.on('error', reject); req.write(bodyStr); req.end()
+    })
+}
+
+/**
+ * Append confirmed booking details to:
+ *   1. A tab named after the professional (auto-created on first booking)
+ *   2. The aggregate "All Bookings" tab (auto-created if absent)
+ *
+ * Non-blocking  — call with .catch() only; never awaited on the critical path.
+ * Non-throwing  — all errors are logged, not re-raised.
+ */
+async function appendBookingToSheet(booking) {
+    const sheetId = process.env.GOOGLE_SHEET_ID
+    if (!sheetId) {
+        console.warn('[SheetWriteback] GOOGLE_SHEET_ID not set — skipping booking writeback')
+        return
+    }
+
+    let token
+    try {
+        token = await getAccessToken()
+    } catch (err) {
+        console.error('[SheetWriteback] Auth failed for booking writeback:', err.message)
+        return
+    }
+    if (!token) {
+        console.warn('[SheetWriteback] No service account configured — skipping booking writeback')
+        return
+    }
+
+    try {
+        // ── Build the row values ───────────────────────────────────────────────
+        const triage = booking.triageData || {}
+        const slot = booking.selectedSlot || {}
+        const proName = booking.professional || slot.professional || 'Unknown'
+        const now = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+
+        const bookingRow = [
+            booking.id || '',
+            booking.name || '',
+            booking.email || '',
+            booking.phone || '',
+            slot.date || '',
+            slot.time || '',
+            booking.sessionType === 'priority' ? 'Priority Session' : 'Regular Session',
+            label(CONCERN_LABELS, triage.concern),
+            label(DURATION_LABELS, triage.duration),
+            labelList(IMPACT_LABELS, triage.impacts),
+            triage.isFirstTimer === true ? 'Yes' : triage.isFirstTimer === false ? 'No' : '',
+            'Website',
+            'Confirmed',
+            '',            // Notes — counsellor fills manually
+            now,
+        ]
+
+        const allBookingsRow = [proName, ...bookingRow]
+
+        // ── Ensure tabs exist ──────────────────────────────────────────────────
+        const tabs = await listTabs(sheetId, token)
+        const tabName = toTabName(proName)
+
+        if (!tabs.has(tabName)) {
+            await createTabWithHeaders(sheetId, token, tabName, BOOKING_HEADERS)
+        }
+        if (!tabs.has('All Bookings')) {
+            await createTabWithHeaders(sheetId, token, 'All Bookings', ALL_BOOKINGS_HEADERS)
+        }
+
+        // ── Append rows ────────────────────────────────────────────────────────
+        await Promise.all([
+            appendRow(sheetId, token, tabName, bookingRow),
+            appendRow(sheetId, token, 'All Bookings', allBookingsRow),
+        ])
+
+        console.log(`[SheetWriteback] ✅ Booking ${booking.id} written to "${tabName}" + "All Bookings"`)
+    } catch (err) {
+        // Never block the confirmation flow — just log
+        console.error('[SheetWriteback] ❌ Booking writeback failed:', err.message)
+    }
+}
+
