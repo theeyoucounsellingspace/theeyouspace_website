@@ -2,10 +2,14 @@ const express = require('express')
 const router = express.Router()
 const { body, query, validationResult } = require('express-validator')
 const { createPaymentOrder } = require('../services/payment.service')
-const { getAvailableSlots } = require('../services/calendar.service')
+const { getAvailableSlots, isSlotAvailable, bookSlot } = require('../services/calendar.service')
 const { getPricing } = require('../utils/pricing.service')
 const { bookingLimiter, slotLimiter } = require('../middleware/rateLimiter.middleware')
 const { SESSION_TYPES } = require('../utils/constants')
+const Booking = require('../models/Booking')
+const { isMoreThan24HoursAway } = require('../utils/dateParser')
+const { sendRescheduleConfirmation, sendRescheduleAlert } = require('../services/email.service')
+const { removeSlotFromSheet, appendBookingToSheet, updateBookingStatusInSheet } = require('../services/sheetWriteback.service')
 
 /**
  * GET /api/booking/slots
@@ -120,6 +124,140 @@ router.post(
         success: false,
         error: error.message || 'Failed to create booking',
       })
+    }
+  }
+)
+
+/**
+ * GET /api/booking/:id/reschedule-check?email=xxx
+ * Check if a booking is eligible for reschedule.
+ * Returns: { eligible, name, professional, currentSlot, availableSlots, reason }
+ */
+router.get('/:id/reschedule-check', async (req, res) => {
+  try {
+    const booking = Booking.findById(req.params.id)
+    if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' })
+
+    // Email verification — patient must prove they own the booking
+    const emailParam = (req.query.email || '').trim().toLowerCase()
+    if (!emailParam || emailParam !== booking.email.toLowerCase()) {
+      return res.status(403).json({ success: false, error: 'Email does not match this booking' })
+    }
+
+    // Must be a confirmed, paid booking
+    if (booking.paymentStatus !== 'paid' || booking.bookingStatus !== 'confirmed') {
+      return res.status(400).json({ success: false, eligible: false, reason: 'Booking is not in a reschedulable state' })
+    }
+
+    // 24hr window check
+    const slot = booking.selectedSlot || {}
+    const eligible = isMoreThan24HoursAway(slot.date, slot.time)
+    if (!eligible) {
+      return res.json({
+        success: true,
+        eligible: false,
+        reason: 'The 24-hour reschedule window has passed',
+        currentSlot: slot,
+        contact: process.env.SMTP_USER || '',
+      })
+    }
+
+    // Return available slots for the SAME professional only
+    const pro = booking.professional || slot.professional
+    const allSlots = getAvailableSlots()
+    const availableSlots = allSlots
+      .filter(s => (!pro || s.professional === pro))
+      .map(s => ({ id: s.id, date: s.date, time: s.time, professional: s.professional }))
+
+    return res.json({
+      success: true,
+      eligible: true,
+      name: booking.name,
+      professional: pro,
+      currentSlot: slot,
+      availableSlots,
+    })
+  } catch (err) {
+    console.error('[Reschedule check] Error:', err.message)
+    res.status(500).json({ success: false, error: 'Failed to check reschedule eligibility' })
+  }
+})
+
+/**
+ * POST /api/booking/:id/reschedule
+ * Process a reschedule: update booking, sheet, send emails.
+ * Body: { email, newSlotDate, newSlotTime }
+ */
+router.post('/:id/reschedule',
+  [
+    body('email').isEmail().withMessage('Valid email required'),
+    body('newSlotDate').notEmpty().withMessage('New date required'),
+    body('newSlotTime').notEmpty().withMessage('New time required'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() })
+
+    try {
+      const booking = Booking.findById(req.params.id)
+      if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' })
+
+      // Re-verify email server-side
+      if ((req.body.email || '').toLowerCase() !== booking.email.toLowerCase()) {
+        return res.status(403).json({ success: false, error: 'Email does not match this booking' })
+      }
+
+      // Re-check 24hr window server-side (never trust frontend)
+      const oldSlot = { ...booking.selectedSlot }
+      if (!isMoreThan24HoursAway(oldSlot.date, oldSlot.time)) {
+        return res.status(400).json({ success: false, error: 'Reschedule window has closed (must be > 24 hours before session)' })
+      }
+
+      const { newSlotDate, newSlotTime } = req.body
+      const pro = booking.professional || oldSlot.professional
+
+      // Verify new slot exists and is available for the same professional
+      if (!isSlotAvailable(newSlotDate, newSlotTime, pro)) {
+        return res.status(409).json({ success: false, error: 'Selected slot is no longer available. Please pick another.' })
+      }
+
+      // Book the new slot
+      const newSlot = { date: newSlotDate, time: newSlotTime, professional: pro }
+      bookSlot(newSlotDate, newSlotTime, booking.id, pro)
+
+      // Update booking in memory
+      Booking.updateById(booking.id, {
+        selectedSlot: newSlot,
+        sessionReminderSent: false, // reset so reminder fires for new slot
+      })
+
+      const updatedBooking = Booking.findById(booking.id)
+
+      // Non-blocking side effects
+      Promise.allSettled([
+        sendRescheduleConfirmation(updatedBooking, newSlot),
+        sendRescheduleAlert(updatedBooking, oldSlot, newSlot),
+        // Update sheet: mark old row as Rescheduled + add new slot removal
+        updateBookingStatusInSheet(booking.id, pro, oldSlot.date, oldSlot.time, 'Rescheduled').catch(e =>
+          console.error('[Reschedule] Sheet status update failed:', e.message)
+        ),
+        removeSlotFromSheet(pro, newSlotDate, newSlotTime).catch(e =>
+          console.error('[Reschedule] New slot sheet removal failed:', e.message)
+        ),
+      ]).then(results => {
+        results.forEach((r, i) => {
+          if (r.status === 'rejected') console.error(`[Reschedule] Side effect ${i} failed:`, r.reason?.message)
+        })
+      })
+
+      return res.json({
+        success: true,
+        message: 'Session rescheduled successfully',
+        newSlot,
+      })
+    } catch (err) {
+      console.error('[Reschedule] Error:', err.message)
+      res.status(500).json({ success: false, error: 'Failed to process reschedule' })
     }
   }
 )

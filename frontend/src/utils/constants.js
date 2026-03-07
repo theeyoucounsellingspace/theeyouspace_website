@@ -20,6 +20,7 @@ export const ROUTES = {
   PRIORITY: '/priority',
   SAFETY: '/safety',
   ABOUT: '/about',
+  RESCHEDULE: '/reschedule',
 }
 
 // Updated with Indian Emergency Contacts

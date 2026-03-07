@@ -67,12 +67,15 @@ async function sendBookingConfirmation(booking) {
         </table>
       </div>
 
-      <p style="font-size: 0.9rem; line-height: 1.75; color: #5A5248; margin-bottom: 0.5rem;">
-        To reschedule, reply to this email with your Booking ID
-        (<strong>${booking.id}</strong>) at least 24 hours before your session.
-        For anything else, reach us at
-        <a href="mailto:${process.env.SMTP_USER}" style="color: #7a6e6b;">${process.env.SMTP_USER}</a>.
-      </p>
+      <div style="text-align:center; margin: 1.5rem 0;">
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/reschedule?bid=${booking.id}"
+           style="display:inline-block; background:#8B7355; color:#fff; text-decoration:none; font-size:0.9rem; font-weight:600; padding:0.7rem 1.6rem; border-radius:999px; font-family:sans-serif;">
+          Reschedule this session
+        </a>
+        <p style="font-size:0.75rem; color:#8a7d70; margin:0.5rem 0 0;">
+          Must be requested at least 24 hours before your session time.
+        </p>
+      </div>
 
       <p style="font-size: 0.95rem; line-height: 1.75; color: #5A5248; margin: 0;">
         Take care,<br>
@@ -229,4 +232,124 @@ async function _send({ to, subject, html, tag, bookingId }) {
   }
 }
 
-module.exports = { sendBookingConfirmation, sendSessionPrepEmail }
+module.exports = {
+  sendBookingConfirmation,
+  sendSessionPrepEmail,
+  sendSessionReminder,
+  sendCounsellorMorningBrief,
+  sendRescheduleConfirmation,
+  sendRescheduleAlert,
+}
+
+// ── Session reminder (24hr before) ────────────────────────────────────────────
+
+async function sendSessionReminder(booking) {
+  const name = booking.name?.split(' ')[0] || 'there'
+  const proName = booking.professional || ''
+  const slot = booking.selectedSlot || {}
+
+  const html = `<div style="${BASE}">
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">Session Reminder</p>
+    <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.6rem; margin:0 0 1rem; color:#2A2520;">Your session is tomorrow</h2>
+    <p style="font-size:1rem; line-height:1.75; color:#5A5248; margin-bottom:1.5rem;">
+      Hi ${name}, just a reminder that your counselling session is coming up.
+    </p>
+    <div style="${CARD}">
+      <table style="width:100%; border-collapse:collapse;">
+        ${proName ? row('Your counsellor', proName) : ''}
+        ${row('Date', slot.date)}
+        ${row('Time', slot.time)}
+        ${row('Session type', booking.sessionType === 'priority' ? 'Priority Session' : 'Regular Session')}
+        ${row('Booking ID', booking.id)}
+      </table>
+    </div>
+    <p style="font-size:0.9rem; color:#5A5248; line-height:1.75; margin:0 0 0.5rem;">
+      If you need to reschedule, please do so at least 24 hours before your session:
+    </p>
+    <div style="text-align:center; margin:1rem 0;">
+      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/reschedule?bid=${booking.id}"
+         style="display:inline-block; background:#8B7355; color:#fff; text-decoration:none; font-size:0.9rem; font-weight:600; padding:0.7rem 1.6rem; border-radius:999px; font-family:sans-serif;">
+        Reschedule this session
+      </a>
+    </div>
+    <p style="font-size:0.95rem; color:#5A5248; margin:1.5rem 0 0;">Take care,<br><strong>Thee You Space</strong><br><em style="font-size:0.85rem; color:#8a7d70;">where You Open Up</em></p>
+  </div>`
+
+  await _send({ to: booking.email, subject: 'Reminder: Your session is tomorrow — Thee You Space', html, tag: 'reminder', bookingId: booking.id })
+}
+
+// ── Counsellor morning brief ──────────────────────────────────────────────────
+
+async function sendCounsellorMorningBrief(allBookings, byPro) {
+  const to = process.env.NOTIFY_EMAIL || process.env.SMTP_USER
+  const date = allBookings[0]?.selectedSlot?.date || 'Today'
+
+  const proSections = Object.entries(byPro).map(([pro, bkgs]) => {
+    const sessionRows = bkgs.map(b =>
+      `<li style="margin-bottom:0.5rem;"><strong>${b.selectedSlot?.time}</strong> — ${b.name} (${b.email})${b.phone ? ` · ${b.phone}` : ''}</li>`
+    ).join('')
+    return `<div style="${CARD}">
+      <p style="font-weight:600; font-size:1rem; margin:0 0 0.75rem; color:#2A2520;">${pro}</p>
+      <ul style="margin:0; padding-left:1.25rem; color:#5A5248; font-size:0.9rem; line-height:1.8;">${sessionRows}</ul>
+    </div>`
+  }).join('')
+
+  const html = `<div style="${BASE}">
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">Morning Brief</p>
+    <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.6rem; margin:0 0 0.5rem; color:#2A2520;">Sessions for ${date}</h2>
+    <p style="font-size:0.95rem; color:#5A5248; margin:0 0 1.5rem;">${allBookings.length} session(s) scheduled today.</p>
+    ${proSections}
+    <p style="font-size:0.8rem; color:#8a7d70; margin:1.5rem 0 0;">Sent automatically by Thee You Space at 8 AM IST.</p>
+  </div>`
+
+  await _send({ to, subject: `Morning Brief: ${allBookings.length} session(s) today — ${date}`, html, tag: 'morning-brief', bookingId: 'N/A' })
+}
+
+// ── Reschedule confirmation (to patient) ─────────────────────────────────────
+
+async function sendRescheduleConfirmation(booking, newSlot) {
+  const name = booking.name?.split(' ')[0] || 'there'
+  const html = `<div style="${BASE}">
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">Booking Updated</p>
+    <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.6rem; margin:0 0 1rem; color:#2A2520;">Your session has been rescheduled</h2>
+    <p style="font-size:1rem; line-height:1.75; color:#5A5248; margin-bottom:1.5rem;">
+      Hi ${name}, your session has been moved to the new slot below.
+    </p>
+    <div style="${CARD}">
+      <table style="width:100%; border-collapse:collapse;">
+        ${booking.professional ? row('Your counsellor', booking.professional) : ''}
+        ${row('New date', newSlot.date)}
+        ${row('New time', newSlot.time)}
+        ${row('Session type', booking.sessionType === 'priority' ? 'Priority Session' : 'Regular Session')}
+        ${row('Booking ID', booking.id)}
+      </table>
+    </div>
+    <p style="font-size:0.75rem; color:#8a7d70; margin:0;">You can reschedule again up to 24 hours before your session using the link in your original confirmation email.</p>
+  </div>`
+
+  await _send({ to: booking.email, subject: 'Your session has been rescheduled — Thee You Space', html, tag: 'reschedule-confirmation', bookingId: booking.id })
+}
+
+// ── Reschedule alert (to practice inbox) ─────────────────────────────────────
+
+async function sendRescheduleAlert(booking, oldSlot, newSlot) {
+  const to = process.env.NOTIFY_EMAIL || process.env.SMTP_USER
+  const html = `<div style="${BASE}">
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">Reschedule Alert</p>
+    <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.5rem; margin:0 0 1rem; color:#2A2520;">Session rescheduled by patient</h2>
+    <div style="${CARD}">
+      <table style="width:100%; border-collapse:collapse;">
+        ${row('Booking ID', booking.id)}
+        ${row('Patient', booking.name)}
+        ${row('Email', booking.email)}
+        ${booking.phone ? row('Phone', booking.phone) : ''}
+        ${booking.professional ? row('Counsellor', booking.professional) : ''}
+        ${row('Old slot', `${oldSlot.date} at ${oldSlot.time}`)}
+        ${row('New slot', `${newSlot.date} at ${newSlot.time}`)}
+      </table>
+    </div>
+    <p style="font-size:0.8rem; color:#8a7d70; margin:0;">Sheet has been updated automatically.</p>
+  </div>`
+
+  await _send({ to, subject: `Reschedule: ${booking.name} moved to ${newSlot.date} ${newSlot.time}`, html, tag: 'reschedule-alert', bookingId: booking.id })
+}

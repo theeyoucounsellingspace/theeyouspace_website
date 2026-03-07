@@ -15,6 +15,8 @@ const professionalsRoutes = require('./routes/professionals.routes')
 
 // Google Sheets sync
 const { startAutoSync } = require('./services/googleSheets.service')
+// Background scheduler
+const { startScheduler } = require('./services/scheduler.service')
 
 // Import middleware
 const { apiLimiter } = require('./middleware/rateLimiter.middleware')
@@ -140,6 +142,13 @@ app.listen(PORT, () => {
 
   // Start Google Sheets auto-sync (every 30 minutes, falls back to dev slots)
   startAutoSync(30)
+
+  // Start background scheduler (slot cleanup + session reminders + morning brief)
+  startScheduler()
+
+  if (!process.env.NOTIFY_EMAIL) {
+    console.warn('⚠️  Warning: NOTIFY_EMAIL not set — internal emails will go to SMTP_USER')
+  }
 })
 
 module.exports = app

@@ -22,6 +22,8 @@ class Booking {
     this.bookingStatus = data.bookingStatus || 'pending'
     // Triage data — stored as-is, used for session prep email and counsellor notes
     this.triageData = data.triageData || null
+    this.sessionReminderSent = false   // set true after 24hr reminder fires
+    this.rescheduledFrom = data.rescheduledFrom || null  // original bookingId if rescheduled
     this.createdAt = new Date().toISOString()
     this.updatedAt = new Date().toISOString()
   }
@@ -72,6 +74,8 @@ class Booking {
       paymentStatus: this.paymentStatus,
       bookingStatus: this.bookingStatus,
       triageData: this.triageData,
+      sessionReminderSent: this.sessionReminderSent,
+      rescheduledFrom: this.rescheduledFrom,
       razorpayOrderId: this.razorpayOrderId,
       razorpayPaymentId: this.razorpayPaymentId,
       createdAt: this.createdAt,

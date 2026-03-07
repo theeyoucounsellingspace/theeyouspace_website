@@ -236,7 +236,64 @@ async function removeSlotFromSheet(professional, date, time) {
 }
 
 
-module.exports = { removeSlotFromSheet, appendBookingToSheet }
+module.exports = { removeSlotFromSheet, appendBookingToSheet, updateBookingStatusInSheet }
+
+/**
+ * updateBookingStatusInSheet(bookingId, professional, date, time, newStatus)
+ *
+ * Finds the row in the professional's tab matching bookingId (column A)
+ * and updates the Status column (column M, index 12) to newStatus.
+ * Non-throwing — all failures are logged only.
+ */
+async function updateBookingStatusInSheet(bookingId, professional, date, time, newStatus) {
+    const sheetId = process.env.GOOGLE_SHEET_ID
+    if (!sheetId || !bookingId) return
+
+    let token
+    try { token = await getAccessToken() } catch { return }
+    if (!token) return
+
+    try {
+        const tabName = (professional || 'Unknown').replace(/[\[\]:*?/\\]/g, '').trim().slice(0, 95)
+
+        // Read the professional's tab
+        const data = await getJson(
+            `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabName)}`,
+            token
+        )
+        const rows = data.values || []
+        if (rows.length < 2) return
+
+        // Column A = Booking ID, Column M (index 12) = Status
+        const BOOKING_ID_COL = 0
+        const STATUS_COL = 12
+
+        let targetRow = -1
+        for (let i = 1; i < rows.length; i++) {
+            if ((rows[i][BOOKING_ID_COL] || '').trim() === bookingId) {
+                targetRow = i + 1 // 1-indexed for Sheets API
+                break
+            }
+        }
+
+        if (targetRow === -1) {
+            console.warn(`[SheetWriteback] updateStatus: booking ${bookingId} not found in tab "${tabName}"`)
+            return
+        }
+
+        // Write new status to column M of that row
+        const range = `${tabName}!M${targetRow}`
+        await putJson(
+            `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`,
+            token,
+            { range, majorDimension: 'ROWS', values: [[newStatus]] }
+        )
+        console.log(`[SheetWriteback] ✅ Status updated to "${newStatus}" for booking ${bookingId} in tab "${tabName}"`)
+    } catch (err) {
+        console.error('[SheetWriteback] updateStatus failed:', err.message)
+    }
+}
+
 
 // ─── Booking Writeback ────────────────────────────────────────────────────────
 

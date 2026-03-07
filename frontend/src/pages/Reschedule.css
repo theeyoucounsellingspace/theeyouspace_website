@@ -1,0 +1,210 @@
+/* ── Reschedule page ─────────────────────────────────────────────────────── */
+
+.rs-wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    text-align: center;
+    animation: var(--fade-in);
+}
+
+.rs-wrap--wide {
+    max-width: 600px;
+}
+
+/* Eyebrow */
+.rs-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #b07030;
+    margin: 0 0 0.75rem;
+}
+
+/* Title */
+.rs-title {
+    font-family: var(--font-family-serif);
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    font-weight: 400;
+    color: var(--color-text);
+    margin: 0 0 1rem;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+}
+
+/* Body */
+.rs-body {
+    font-size: 0.95rem;
+    color: var(--color-text-light);
+    line-height: 1.75;
+    margin: 0 0 1.5rem;
+}
+
+.rs-body--center {
+    text-align: center;
+}
+
+/* Form */
+.rs-form {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.rs-input {
+    padding: 0.8rem 1rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    transition: border-color 0.2s;
+    outline: none;
+}
+
+.rs-input:focus {
+    border-color: var(--color-primary);
+}
+
+.rs-input--err {
+    border-color: #cc5555;
+}
+
+.rs-field-err {
+    font-size: 0.8rem;
+    color: #cc5555;
+    margin: 0;
+}
+
+.rs-field-err--center {
+    text-align: center;
+}
+
+/* Primary button */
+.rs-btn-primary {
+    display: block;
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+    background: var(--color-primary);
+    color: #fff;
+    font-family: var(--font-family-sans);
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    margin-top: 0.5rem;
+}
+
+.rs-btn-primary:hover:not(:disabled) {
+    background: var(--color-primary-dark, #6b5540);
+    transform: translateY(-1px);
+}
+
+.rs-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Contact link */
+.rs-contact,
+.rs-link {
+    color: var(--color-primary);
+    font-size: 0.95rem;
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 1px;
+}
+
+.rs-contact:hover,
+.rs-link:hover {
+    opacity: 0.75;
+}
+
+/* Current slot info bar */
+.rs-current {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    background: var(--color-surface-warm);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 0.85rem 1.25rem;
+    margin-bottom: 1.75rem;
+}
+
+.rs-current-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.rs-current-val {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+/* Slot grid */
+.rs-slot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.rs-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-surface);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.rs-slot:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+}
+
+.rs-slot--chosen {
+    border-color: var(--color-primary);
+    background: var(--color-surface-warm);
+    box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.rs-slot-date {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.rs-slot-time {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+}
+
+/* Success icon */
+.rs-success-icon {
+    font-size: 2rem;
+    color: #4caf50;
+    margin-bottom: 0.75rem;
+    line-height: 1;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .rs-slot-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}

@@ -10,6 +10,7 @@ import Confirmation from './pages/Confirmation'
 import Priority from './pages/Priority'
 import Safety from './pages/Safety'
 import About from './pages/About'
+import Reschedule from './pages/Reschedule'
 import ScrollToTop from './components/ScrollToTop'
 import { ROUTES } from './utils/constants'
 
@@ -28,6 +29,7 @@ function App() {
           <Route path={ROUTES.PRIORITY} element={<Priority />} />
           <Route path={ROUTES.SAFETY} element={<Safety />} />
           <Route path={ROUTES.ABOUT} element={<About />} />
+          <Route path={ROUTES.RESCHEDULE} element={<Reschedule />} />
         </Routes>
       </Layout>
     </Router>
