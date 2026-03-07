@@ -43,9 +43,9 @@ function About() {
                     psychological support.
                 </p>
 
-                {/* ── Founder portrait grid ── */}
+                {/* ── Founder portrait grid — founders only, counsellors excluded ── */}
                 <div className="founder-grid">
-                    {TEAM_DATA.map(member => (
+                    {TEAM_DATA.filter(m => m.isFounder !== false).map(member => (
                         <div key={member.name} className="founder-portrait">
                             <div className="founder-photo-wrap">
                                 {member.photo

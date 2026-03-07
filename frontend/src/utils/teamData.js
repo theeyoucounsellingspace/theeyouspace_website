@@ -50,12 +50,13 @@ export const TEAM_DATA = [
         areas: ['Relationships', 'Identity', 'Work Stress', 'Academics', 'Professional Growth', 'Anxiety', 'Grief'],
         approach: ['CBT', 'Person-Centered Therapy', 'Couple Counselling'],
         photo: mohammedPhoto,
-        // His headshot is tighter than the others — contain scales it down to fit the circle properly
-        photoFit: 'contain',
-        photoPosition: 'center 45%',
+        // Mohammed's headshot — zoom in (cover), shift down 15px so face centres in the circle
+        photoFit: 'cover',
+        photoPosition: 'center 60%',
     },
     {
-        // Counsellor (not founder) — appears on Schedule page only, not About
+        // Counsellor — appears on Schedule/booking only, NOT on the About page
+        isFounder: false,
         name: 'Joan Ana',
         role: 'Counselling Psychologist',
         exp: '1.5+ yrs exp',
