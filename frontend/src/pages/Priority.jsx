@@ -2,7 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
 import CalmContainer from '../components/CalmContainer'
-import { ROUTES, EMERGENCY_CONTACTS, WHATSAPP_LINK } from '../utils/constants'
+import { ROUTES, WHATSAPP_LINK } from '../utils/constants'
 import './Priority.css'
 
 function Priority() {
@@ -11,40 +11,49 @@ function Priority() {
   return (
     <CalmContainer>
       <div className="priority">
-        <h2 className="priority-title">We're here for you</h2>
-        <p className="priority-text">
-          If you're in immediate distress or having thoughts of self-harm, please reach out to emergency services right away.
+
+        <p className="priority-eyebrow">Priority Session</p>
+        <h2 className="priority-title">You'll hear back faster.</h2>
+        <p className="priority-sub">
+          When waiting isn't an option, we move you up the queue.
+          A counsellor from our team will reach out to confirm your slot within a few hours.
         </p>
-        <div className="priority-emergency">
-          <p className="emergency-title">Emergency contacts (India):</p>
-          <ul className="emergency-list">
-            {EMERGENCY_CONTACTS.map((contact, index) => (
-              <li key={index}>
-                <span className="contact-name">{contact.name}</span>
-                <span className="contact-number">{contact.number}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="priority-text">
-          For urgent support that isn't an emergency, you can reach out to us via WhatsApp below. We'll do our best to connect you with someone as soon as possible.
-        </p>
-        <div className="priority-actions">
+
+        {/* Primary CTA — WhatsApp, no number visible */}
+        <div className="priority-cta-block">
           <a
             href={WHATSAPP_LINK}
-            className="btn btn-primary whatsapp-btn"
+            className="priority-wa-btn"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Connect via WhatsApp (+91 73581 54022)
+            Message us on WhatsApp →
           </a>
-          <Button
-            variant="secondary"
-            onClick={() => navigate(ROUTES.HOME)}
-          >
-            Return to home
-          </Button>
+          <p className="priority-cta-note">
+            Just send a "Hi" — we'll take it from there.
+          </p>
         </div>
+
+        <div className="priority-divider">or</div>
+
+        {/* Secondary CTA — back into the standard booking flow */}
+        <div className="priority-book-block">
+          <Button
+            variant="primary"
+            onClick={() => navigate(ROUTES.TRIAGE)}
+          >
+            Book a session now
+          </Button>
+          <p className="priority-book-note">
+            Pick a counsellor and a time that works for you.
+          </p>
+        </div>
+
+        {/* Fine print — present, not prominent */}
+        <p className="priority-fine">
+          If you are in immediate danger, please call 112 or visit your nearest emergency room.
+        </p>
+
       </div>
     </CalmContainer>
   )
