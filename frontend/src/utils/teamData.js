@@ -51,8 +51,8 @@ export const TEAM_DATA = [
         approach: ['CBT', 'Person-Centered Therapy', 'Couple Counselling'],
         photo: mohammedPhoto,
         // Mohammed's headshot — zoom in (cover), shift down 15px so face centres in the circle
-        photoFit: 'cover',
-        photoPosition: 'center 60%',
+        photoFit: 'contain',
+        photoPosition: 'center 80%',
     },
     {
         // Counsellor — appears on Schedule/booking only, NOT on the About page
