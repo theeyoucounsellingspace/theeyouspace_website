@@ -125,31 +125,38 @@ class AvailabilitySlot {
   }
 
   /**
-   * Dev seed — only used when no Google Sheet is configured.
+   * Dev seed — only used when no Google Sheet is configured (local dev without .env).
+   * Uses REAL professional names and staggered times so the Schedule page looks correct.
    */
   static seedDevSlots() {
     if (slots.length > 0) return
 
-    const professionals = ['Dr. Priya', 'Dr. Arjun', 'Dr. Meera', 'Dr. Rohan']
-    const times = ['10:00 AM', '12:00 PM', '2:00 PM', '4:00 PM', '6:00 PM']
+    // Real professionals with distinct time slots (mirrors seed-slots.js config)
+    const PROFESSIONALS = [
+      { name: 'Jeevan KJ', times: ['10:00 AM', '12:00 PM', '4:00 PM'], days: [1, 2, 3, 4, 6] },
+      { name: 'Leaskar Paulraj DJ', times: ['11:00 AM', '3:00 PM', '6:00 PM'], days: [1, 3, 5, 6] },
+      { name: 'Abijith KB', times: ['9:00 AM', '11:00 AM', '5:00 PM'], days: [2, 3, 4, 5] },
+      { name: 'Mohammed Muhaiyadeen M', times: ['10:00 AM', '2:00 PM', '5:00 PM'], days: [1, 2, 4, 6] },
+      { name: 'Joan Ana', times: ['9:30 AM', '12:00 PM', '3:30 PM'], days: [1, 2, 3, 5, 6] },
+    ]
+
     const today = new Date()
+    let slotId = 0
 
-    professionals.forEach((professional, pIdx) => {
-      for (let i = 1; i <= 5; i++) {
+    PROFESSIONALS.forEach(pro => {
+      for (let d = 1; d <= 14; d++) {
         const date = new Date(today)
-        date.setDate(today.getDate() + i)
-        if (date.getDay() === 0) continue // Skip Sunday
+        date.setDate(today.getDate() + d)
+        const dow = date.getDay() // 0=Sun…6=Sat
+        if (!pro.days.includes(dow)) continue
 
-        const dateStr = date.toLocaleDateString('en-IN', {
-          weekday: 'long', month: 'short', day: 'numeric',
-        })
+        // Format as D/M/YYYY to match the real sheet format the parser expects
+        const dateStr = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
 
-        // Each professional gets 2-3 time slots per day (staggered)
-        const myTimes = times.slice(pIdx % 2, (pIdx % 2) + 3)
-        myTimes.forEach((time, tIdx) => {
+        pro.times.forEach(time => {
           slots.push({
-            id: `dev-${pIdx}-${i}-${tIdx}`,
-            professional,
+            id: `dev-${++slotId}`,
+            professional: pro.name,
             date: dateStr,
             time,
             available: true,
@@ -160,7 +167,7 @@ class AvailabilitySlot {
       }
     })
 
-    console.log(`[Slots] Seeded ${slots.length} dev slots across ${professionals.length} professionals (no Sheet configured)`)
+    console.log(`[Slots] Seeded ${slots.length} dev slots across ${PROFESSIONALS.length} real professionals (no Sheet configured)`)
     lastUploadedBy = 'dev-seed'
     lastUploadedAt = null
   }
