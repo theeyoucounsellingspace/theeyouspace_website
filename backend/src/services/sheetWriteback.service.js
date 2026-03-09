@@ -236,7 +236,109 @@ async function removeSlotFromSheet(professional, date, time) {
 }
 
 
-module.exports = { removeSlotFromSheet, appendBookingToSheet, updateBookingStatusInSheet }
+
+module.exports = { removeSlotFromSheet, appendBookingToSheet, updateBookingStatusInSheet, restoreBookingsFromSheet }
+
+/**
+ * restoreBookingsFromSheet()
+ *
+ * Called once on server startup. Reads the "All Bookings" tab from Google Sheet
+ * and rebuilds the in-memory Booking store — so confirmed bookings survive server restarts.
+ *
+ * Column layout (All Bookings tab):
+ *   A: Professional  B: Booking ID  C: Patient Name  D: Email  E: Phone
+ *   F: Date          G: Time        H: Session Type  ...       M: Status  O: Confirmed At
+ *
+ * Non-blocking — errors are logged only, never thrown.
+ * Returns: number of bookings restored.
+ */
+async function restoreBookingsFromSheet() {
+    const Booking = require('../models/Booking')
+    const sheetId = process.env.GOOGLE_SHEET_ID
+    if (!sheetId) {
+        console.log('[BookingRestore] GOOGLE_SHEET_ID not set — skipping restore')
+        return 0
+    }
+
+    let token
+    try {
+        token = await getAccessToken()
+    } catch (err) {
+        console.error('[BookingRestore] Auth failed:', err.message)
+        return 0
+    }
+    if (!token) {
+        console.log('[BookingRestore] No service account configured — skipping restore')
+        return 0
+    }
+
+    try {
+        const data = await getJson(
+            `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('All Bookings')}`,
+            token
+        )
+        const rows = data.values || []
+        if (rows.length < 2) {
+            console.log('[BookingRestore] "All Bookings" tab is empty — nothing to restore')
+            return 0
+        }
+
+        // Column index constants  (header row = rows[0], data starts at rows[1])
+        const C = {
+            professional: 0,
+            bookingId: 1,
+            name: 2,
+            email: 3,
+            phone: 4,
+            date: 5,
+            time: 6,
+            sessionType: 7,
+            status: 13,
+            confirmedAt: 15,
+        }
+
+        let restored = 0
+        let skipped = 0
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i]
+            const bookingId = (row[C.bookingId] || '').trim()
+
+            // Must look like a real booking ID
+            if (!bookingId || !bookingId.startsWith('TYS-')) { skipped++; continue }
+
+            // Skip if already in memory (page reload without full restart)
+            if (Booking.findById(bookingId)) { skipped++; continue }
+
+            const statusInSheet = (row[C.status] || 'Confirmed').trim()
+            const rawType = (row[C.sessionType] || '').toLowerCase()
+            const professional = (row[C.professional] || '').trim()
+            const date = (row[C.date] || '').trim()
+            const time = (row[C.time] || '').trim()
+
+            Booking.restore({
+                id: bookingId,
+                professional,
+                name: (row[C.name] || '').trim(),
+                email: (row[C.email] || '').trim(),
+                phone: (row[C.phone] || '').trim() || null,
+                selectedSlot: { date, time, professional },
+                sessionType: rawType.includes('priority') ? 'priority' : 'normal',
+                paymentStatus: 'paid',
+                bookingStatus: statusInSheet.toLowerCase() === 'rescheduled' ? 'rescheduled' : 'confirmed',
+                createdAt: (row[C.confirmedAt] || new Date().toISOString()),
+            })
+            restored++
+        }
+
+        console.log(`[BookingRestore] ✅ Restored ${restored} booking(s) from Google Sheet (${skipped} skipped)`)
+        return restored
+    } catch (err) {
+        console.error('[BookingRestore] ❌ Restore failed:', err.message)
+        return 0
+    }
+}
+
 
 /**
  * updateBookingStatusInSheet(bookingId, professional, date, time, newStatus)

@@ -17,6 +17,8 @@ const professionalsRoutes = require('./routes/professionals.routes')
 const { startAutoSync } = require('./services/googleSheets.service')
 // Background scheduler
 const { startScheduler } = require('./services/scheduler.service')
+// Booking persistence restore
+const { restoreBookingsFromSheet } = require('./services/sheetWriteback.service')
 
 // Import middleware
 const { apiLimiter } = require('./middleware/rateLimiter.middleware')
@@ -142,6 +144,11 @@ app.listen(PORT, () => {
 
   // Start Google Sheets auto-sync (every 30 minutes, falls back to dev slots)
   startAutoSync(30)
+
+  // Restore confirmed bookings from the All Bookings sheet tab (survives restarts)
+  restoreBookingsFromSheet().catch(err =>
+    console.error('[BookingRestore] Startup restore error:', err.message)
+  )
 
   // Start background scheduler (slot cleanup + session reminders + morning brief)
   startScheduler()

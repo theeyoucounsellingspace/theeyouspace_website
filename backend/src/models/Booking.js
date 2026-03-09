@@ -34,6 +34,45 @@ class Booking {
     return booking
   }
 
+  /**
+   * Restore a booking from persistent storage (Google Sheet) with a pre-set ID.
+   * Does NOT call the constructor (avoids auto-incrementing the counter for this ID).
+   * DOES advance the counter past this ID to prevent future collisions.
+   */
+  static restore(data) {
+    // Build the object without calling the constructor
+    const booking = Object.create(Booking.prototype)
+    booking.id = data.id
+    booking.sessionType = data.sessionType || 'normal'
+    booking.name = data.name || ''
+    booking.email = data.email || ''
+    booking.phone = data.phone || null
+    booking.professional = data.professional || null
+    booking.selectedSlot = data.selectedSlot || null
+    booking.pricing = data.pricing || null
+    booking.paymentMethod = data.paymentMethod || 'unknown'
+    booking.razorpayOrderId = data.razorpayOrderId || null
+    booking.razorpayPaymentId = data.razorpayPaymentId || null
+    booking.paymentStatus = data.paymentStatus || 'paid'
+    booking.bookingStatus = data.bookingStatus || 'confirmed'
+    booking.triageData = data.triageData || null
+    booking.sessionReminderSent = data.sessionReminderSent || false
+    booking.rescheduledFrom = data.rescheduledFrom || null
+    booking.createdAt = data.createdAt || new Date().toISOString()
+    booking.updatedAt = data.updatedAt || new Date().toISOString()
+
+    bookings.push(booking)
+
+    // Advance counter past this ID — e.g. "TYS-000042" → counter becomes 43
+    const num = parseInt((data.id || '').replace('TYS-', ''), 10)
+    if (!isNaN(num) && num >= bookingIdCounter) {
+      bookingIdCounter = num + 1
+    }
+
+    return booking
+  }
+
+
   static findById(id) {
     return bookings.find((b) => b.id === id)
   }
