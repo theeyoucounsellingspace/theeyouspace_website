@@ -14,7 +14,7 @@ const slotsRoutes = require('./routes/slots.routes')
 const professionalsRoutes = require('./routes/professionals.routes')
 
 // Google Sheets sync
-const { startAutoSync } = require('./services/googleSheets.service')
+const { syncSlotsFromSheet } = require('./services/googleSheets.service')
 // Background scheduler
 const { startScheduler } = require('./services/scheduler.service')
 // Booking persistence restore
@@ -129,33 +129,58 @@ app.use(errorHandler)
 
 // ===== START SERVER =====
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
-
+async function startServer() {
   // Validate required environment variables
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
     console.warn('⚠️  Warning: Razorpay credentials not configured')
   }
-
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn('⚠️  Warning: Email credentials not configured')
   }
-
-  // Start Google Sheets auto-sync (every 30 minutes, falls back to dev slots)
-  startAutoSync(30)
-
-  // Restore confirmed bookings from the All Bookings sheet tab (survives restarts)
-  restoreBookingsFromSheet().catch(err =>
-    console.error('[BookingRestore] Startup restore error:', err.message)
-  )
-
-  // Start background scheduler (slot cleanup + session reminders + morning brief)
-  startScheduler()
-
   if (!process.env.NOTIFY_EMAIL) {
     console.warn('⚠️  Warning: NOTIFY_EMAIL not set — internal emails will go to SMTP_USER')
   }
+
+  // ── Pre-flight: load slots + restore bookings before accepting requests ──
+  // Both run in parallel — server only starts once both are done.
+  // This eliminates the race where the first visitor sees an empty schedule.
+  console.log('[Startup] Syncing slots + restoring bookings...')
+  const t0 = Date.now()
+
+  await Promise.allSettled([
+    syncSlotsFromSheet().catch(err =>
+      console.error('[Startup] Initial slot sync failed:', err.message)
+    ),
+    restoreBookingsFromSheet().catch(err =>
+      console.error('[Startup] Booking restore failed:', err.message)
+    ),
+  ])
+
+  console.log(`[Startup] Pre-flight done in ${Date.now() - t0}ms`)
+
+  // ── Start server ──────────────────────────────────────────────────────────
+  app.listen(PORT, () => {
+    console.log(`[Startup] ✅ Server listening on port ${PORT} (${process.env.NODE_ENV || 'development'})`)
+
+    // Auto-resync every 15 min (keep slots fresh without hammering the API)
+    const SYNC_INTERVAL_MIN = 15
+    const syncTimer = setInterval(() => {
+      syncSlotsFromSheet().catch(err =>
+        console.error('[AutoSync] Periodic sync failed:', err.message)
+      )
+    }, SYNC_INTERVAL_MIN * 60 * 1000)
+    if (syncTimer.unref) syncTimer.unref()
+    console.log(`[AutoSync] Slot refresh every ${SYNC_INTERVAL_MIN} min`)
+
+    // Background scheduler (slot cleanup + reminders + morning brief)
+    startScheduler()
+  })
+}
+
+startServer().catch(err => {
+  console.error('[Startup] Fatal error:', err.message)
+  process.exit(1)
 })
+
 
 module.exports = app
