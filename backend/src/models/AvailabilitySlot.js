@@ -125,54 +125,13 @@ class AvailabilitySlot {
   }
 
   /**
-   * Dev seed — only used when no Google Sheet is configured (local dev without .env).
-   * Uses REAL professional names and staggered times so the Schedule page looks correct.
+   * No dev seed — slots only come from the Google Sheet (via syncSlotsFromSheet).
+   * If the Sheet is not configured, the slot pool stays empty and the schedule
+   * page shows an empty state. That is correct and expected.
    */
-  static seedDevSlots() {
-    if (slots.length > 0) return
-
-    // Real professionals with distinct time slots (mirrors seed-slots.js config)
-    const PROFESSIONALS = [
-      { name: 'Jeevan KJ', times: ['10:00 AM', '12:00 PM', '4:00 PM'], days: [1, 2, 3, 4, 6] },
-      { name: 'Leaskar Paulraj DJ', times: ['11:00 AM', '3:00 PM', '6:00 PM'], days: [1, 3, 5, 6] },
-      { name: 'Abijith KB', times: ['9:00 AM', '11:00 AM', '5:00 PM'], days: [2, 3, 4, 5] },
-      { name: 'Mohammed Muhaiyadeen M', times: ['10:00 AM', '2:00 PM', '5:00 PM'], days: [1, 2, 4, 6] },
-      { name: 'Joan Ana', times: ['9:30 AM', '12:00 PM', '3:30 PM'], days: [1, 2, 3, 5, 6] },
-    ]
-
-    const today = new Date()
-    let slotId = 0
-
-    PROFESSIONALS.forEach(pro => {
-      for (let d = 1; d <= 14; d++) {
-        const date = new Date(today)
-        date.setDate(today.getDate() + d)
-        const dow = date.getDay() // 0=Sun…6=Sat
-        if (!pro.days.includes(dow)) continue
-
-        // Format as D/M/YYYY to match the real sheet format the parser expects
-        const dateStr = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
-
-        pro.times.forEach(time => {
-          slots.push({
-            id: `dev-${++slotId}`,
-            professional: pro.name,
-            date: dateStr,
-            time,
-            available: true,
-            bookedBy: null,
-            bookedAt: null,
-          })
-        })
-      }
-    })
-
-    console.log(`[Slots] Seeded ${slots.length} dev slots across ${PROFESSIONALS.length} real professionals (no Sheet configured)`)
-    lastUploadedBy = 'dev-seed'
-    lastUploadedAt = null
+  static initialize() {
+    console.log('[Slots] Initialized — waiting for Google Sheet sync')
   }
-
-  static initialize() { this.seedDevSlots() }
 }
 
 AvailabilitySlot.initialize()

@@ -10,12 +10,12 @@
  *     | Professional | Date | Time |
  *
  * Backend sync:
- *   - On server start: immediate sync via Sheets API (authenticated, no cache)
+ *   - On server start: immediate sync via Sheets API (authenticated)
  *   - Every 30 minutes: auto re-sync
  *   - On demand: POST /api/slots/sync  (API key protected)
  *
- * Falls back to CSV (GOOGLE_SHEET_URL) if service account is not configured.
- * Falls back to dev slots if neither is configured.
+ * Requires GOOGLE_SHEET_ID + GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_SERVICE_ACCOUNT_KEY.
+ * If not configured, slots remain empty — no fake fallback data.
  */
 
 const https = require('https')
@@ -259,158 +259,143 @@ function parseCsvToSlots(csvText) {
     return { slots, errors, warnings, professionals: [...profMap.values()] }
 }
 
-// ─── Sync ─────────────────────────────────────────────────────────────────────
 
 /**
- * Primary sync path: read Professionals + Slots tabs via Sheets API (authenticated).
- * - Professionals tab → populates profiles cache (name, photo, role, areas, etc.)
- * - Slots tab         → populates availability slots
- * Falls back to legacy CSV sync if service account is not configured.
+ * syncSlotsFromSheet() — reads Professionals + Slots tabs via authenticated Sheets API.
+ * If env vars are missing or API fails, logs clearly and leaves slots empty.
+ * No CSV fallback. No dev-seed fallback. Sheet-first and only.
  */
 async function syncSlotsFromSheet() {
     const sheetId = process.env.GOOGLE_SHEET_ID
-    const rawUrl = process.env.GOOGLE_SHEET_URL
 
-    // ── Path A: Authenticated two-tab read (preferred) ────────────────────────
-    if (sheetId && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
-        let token
-        try {
-            token = await getSAToken()
-        } catch (err) {
-            console.warn(`[Slot Sync] SA auth failed: ${err.message} — falling back to CSV`)
+    if (!sheetId || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+        console.error('[Slot Sync] ❌ GOOGLE_SHEET_ID / GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_SERVICE_ACCOUNT_KEY not set.')
+        console.error('[Slot Sync]    Schedule page will show no slots until these are configured.')
+        return { count: 0, errors: ['Sheet credentials missing'], warnings: [] }
+    }
+
+    let token
+    try {
+        token = await getSAToken()
+    } catch (err) {
+        console.error(`[Slot Sync] ❌ Service account auth failed: ${err.message}`)
+        console.error('[Slot Sync]    Check GOOGLE_SERVICE_ACCOUNT_KEY format in .env')
+        return { count: 0, errors: [`Auth failed: ${err.message}`], warnings: [] }
+    }
+
+    if (!token) {
+        console.error('[Slot Sync] ❌ Got no token from service account — check credentials')
+        return { count: 0, errors: ['No token returned'], warnings: [] }
+    }
+
+    console.log('[Slot Sync] Authenticated ✅ — reading Professionals + Slots tabs...')
+    const errors = [], warnings = []
+
+    // 1. Professionals tab
+    let professionals = []
+    try {
+        const profData = await sheetsGet(
+            `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Professionals')}`,
+            token
+        )
+        const profRows = profData.values || []
+        if (profRows.length >= 2) {
+            const header = profRows[0].map(h => (h || '').toLowerCase().trim())
+            const nameCol = header.findIndex(h => h.includes('professional') || h.includes('name'))
+            const roleCol = header.findIndex(h => h.includes('role') || h.includes('title'))
+            const expCol = header.findIndex(h => h.includes('experience') || h.includes('exp'))
+            const langCol = header.findIndex(h => h.includes('language'))
+            const areasCol = header.findIndex(h => h.includes('area'))
+            const approachCol = header.findIndex(h => h.includes('approach'))
+            const photoCol = header.findIndex(h => h.includes('photo'))
+            for (let i = 1; i < profRows.length; i++) {
+                const r = profRows[i]
+                const name = nameCol !== -1 ? (r[nameCol] || '').trim() : ''
+                if (!name || name.toLowerCase() === 'na') continue
+                professionals.push({
+                    name,
+                    title: roleCol !== -1 ? (r[roleCol] || '') : '',
+                    experience: expCol !== -1 ? (r[expCol] || '') : '',
+                    languages: langCol !== -1 ? (r[langCol] || '') : '',
+                    areas: areasCol !== -1 ? r[areasCol]?.split(',').map(s => s.trim()).filter(Boolean) || [] : [],
+                    approach: approachCol !== -1 ? r[approachCol]?.split(',').map(s => s.trim()).filter(Boolean) || [] : [],
+                    photoUrl: photoCol !== -1 ? (r[photoCol] || '') : '',
+                })
+            }
+            console.log(`[Slot Sync] Professionals tab: ${professionals.length} profiles loaded`)
+            if (professionals.length > 0) ProfessionalsService.setProfessionals(professionals)
+        } else {
+            warnings.push('Professionals tab is empty — add professional rows there')
         }
+    } catch (err) {
+        warnings.push(`Could not read Professionals tab: ${err.message}`)
+    }
 
-        if (token) {
-            console.log('[Slot Sync] Using Sheets API (authenticated)...')
-            const errors = [], warnings = []
-
-            // 1. Read Professionals tab
-            let professionals = []
-            try {
-                const profData = await sheetsGet(
-                    `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Professionals')}`,
-                    token
-                )
-                const profRows = profData.values || []
-                if (profRows.length >= 2) {
-                    const header = profRows[0].map(h => (h || '').toLowerCase().trim())
-                    const nameCol = header.findIndex(h => h.includes('professional') || h.includes('name'))
-                    const roleCol = header.findIndex(h => h.includes('role') || h.includes('title'))
-                    const expCol = header.findIndex(h => h.includes('experience') || h.includes('exp'))
-                    const langCol = header.findIndex(h => h.includes('language'))
-                    const areasCol = header.findIndex(h => h.includes('area'))
-                    const approachCol = header.findIndex(h => h.includes('approach'))
-                    const photoCol = header.findIndex(h => h.includes('photo'))
-                    for (let i = 1; i < profRows.length; i++) {
-                        const r = profRows[i]
-                        const name = nameCol !== -1 ? (r[nameCol] || '').trim() : ''
-                        if (!name || name.toLowerCase() === 'na') continue
-                        professionals.push({
-                            name,
-                            title: roleCol !== -1 ? (r[roleCol] || '') : '',
-                            experience: expCol !== -1 ? (r[expCol] || '') : '',
-                            languages: langCol !== -1 ? (r[langCol] || '') : '',
-                            areas: areasCol !== -1 ? r[areasCol]?.split(',').map(s => s.trim()).filter(Boolean) || [] : [],
-                            approach: approachCol !== -1 ? r[approachCol]?.split(',').map(s => s.trim()).filter(Boolean) || [] : [],
-                            photoUrl: photoCol !== -1 ? (r[photoCol] || '') : '',
-                        })
-                    }
-                    console.log(`[Slot Sync] Professionals tab: ${professionals.length} profiles loaded`)
-                    if (professionals.length > 0) ProfessionalsService.setProfessionals(professionals)
-                } else {
-                    warnings.push('Professionals tab is empty — add professional rows there')
-                }
-            } catch (err) {
-                warnings.push(`Could not read Professionals tab: ${err.message}`)
-            }
-
-            // 2. Read Slots tab
-            let slots = []
-            try {
-                const slotData = await sheetsGet(
-                    `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Slots')}`,
-                    token
-                )
-                const slotRows = slotData.values || []
-                if (slotRows.length >= 2) {
-                    const header = slotRows[0].map(h => (h || '').toLowerCase().trim())
-                    const proCol = header.findIndex(h => h.includes('professional') || h.includes('counsellor'))
-                    const dateCol = header.findIndex(h => h.includes('date'))
-                    const timeCol = header.findIndex(h => h.includes('time'))
-                    if (dateCol === -1 || timeCol === -1) {
-                        errors.push('Slots tab missing Date or Time column')
-                    } else {
-                        for (let i = 1; i < slotRows.length; i++) {
-                            const r = slotRows[i]
-                            const pro = proCol !== -1 ? (r[proCol] || '').trim() : 'General'
-                            const date = (r[dateCol] || '').trim()
-                            const time = (r[timeCol] || '').trim()
-                            // Skip placeholder rows and empty rows
-                            if (!date || !time) continue
-                            if (date.toLowerCase().includes('dd/mm') || time.toLowerCase().includes('hh:mm')) continue
-                            if (date.toLowerCase().includes('e.g') || time.toLowerCase().includes('e.g')) continue
-                            const INVALID = ['na', 'n/a', '-', 'none', 'tbd', '']
-                            if (INVALID.includes(pro.toLowerCase()) || INVALID.includes(date.toLowerCase())) continue
-                            slots.push({ professional: pro, date, time })
-                        }
-                    }
-                    console.log(`[Slot Sync] Slots tab: ${slots.length} valid slots loaded`)
-                } else {
-                    warnings.push('Slots tab has no data rows — add availability slots there')
-                }
-            } catch (err) {
-                errors.push(`Could not read Slots tab: ${err.message}`)
-            }
-
-            if (slots.length === 0) {
-                if (errors.length) console.warn('[Slot Sync] ⚠️  Errors:', errors.join(' | '))
-                console.warn('[Slot Sync] No slots found — schedule page will show empty. Add slots to the Slots tab.')
+    // 2. Slots tab
+    let slots = []
+    try {
+        const slotData = await sheetsGet(
+            `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Slots')}`,
+            token
+        )
+        const slotRows = slotData.values || []
+        if (slotRows.length >= 2) {
+            const header = slotRows[0].map(h => (h || '').toLowerCase().trim())
+            const proCol = header.findIndex(h => h.includes('professional') || h.includes('counsellor'))
+            const dateCol = header.findIndex(h => h.includes('date'))
+            const timeCol = header.findIndex(h => h.includes('time'))
+            if (dateCol === -1 || timeCol === -1) {
+                errors.push('Slots tab missing Date or Time column')
             } else {
-                AvailabilitySlot.loadFromUpload(slots, 'sheets-api-authenticated')
+                for (let i = 1; i < slotRows.length; i++) {
+                    const r = slotRows[i]
+                    const pro = proCol !== -1 ? (r[proCol] || '').trim() : 'General'
+                    const date = (r[dateCol] || '').trim()
+                    const time = (r[timeCol] || '').trim()
+                    if (!date || !time) continue
+                    // Skip any leftover placeholder rows
+                    if (date.toLowerCase().includes('e.g') || time.toLowerCase().includes('e.g')) continue
+                    if (date.toLowerCase().includes('dd/mm') || time.toLowerCase().includes('hh:mm')) continue
+                    const INVALID = ['na', 'n/a', '-', 'none', 'tbd', '']
+                    if (INVALID.includes(pro.toLowerCase()) || INVALID.includes(date.toLowerCase())) continue
+                    slots.push({ professional: pro, date, time })
+                }
             }
-            if (warnings.length) console.warn('[Slot Sync] ⚠️ ', warnings.join(' | '))
-            return { count: slots.length, errors, warnings, professionals: professionals.length }
+            console.log(`[Slot Sync] Slots tab: ${slots.length} valid slots loaded`)
+        } else {
+            warnings.push('Slots tab has no data rows — add availability in the Slots tab')
         }
+    } catch (err) {
+        errors.push(`Could not read Slots tab: ${err.message}`)
     }
-
-    // ── Path B: Legacy CSV fallback (single-tab, unauthenticated) ─────────────
-    if (!rawUrl) {
-        return {
-            count: 0, errors: [], warnings: [], skipped: true,
-            message: 'Neither service account nor GOOGLE_SHEET_URL configured — using dev slots.',
-        }
-    }
-
-    const sheetUrl = normaliseSheetsUrl(rawUrl)
-    console.log('[Slot Sync] Falling back to CSV sync...')
-    const csvText = await fetchUrl(sheetUrl)
-    const { slots, errors, warnings, professionals } = parseCsvToSlots(csvText)
 
     if (slots.length === 0) {
-        throw new Error(`No valid slots parsed from CSV. Errors: ${errors.join('; ')}`)
+        if (errors.length) console.error('[Slot Sync] ❌ Errors:', errors.join(' | '))
+        console.warn('[Slot Sync] ⚠️  No slots loaded — schedule page will show empty. Add slots to the Slots tab.')
+    } else {
+        AvailabilitySlot.loadFromUpload(slots, 'sheets-api')
+        console.log(`[Slot Sync] ✅ ${slots.length} slots live`)
     }
-    AvailabilitySlot.loadFromUpload(slots, 'csv-fallback')
-    console.log(`[Slot Sync] ✅ CSV fallback: ${slots.length} slots synced`)
-    if (professionals.length > 0) ProfessionalsService.setProfessionals(professionals)
+    if (warnings.length) console.warn('[Slot Sync] ⚠️  Warnings:', warnings.join(' | '))
     return { count: slots.length, errors, warnings, professionals: professionals.length }
 }
 
-function startAutoSync(intervalMinutes = 60) {
+function startAutoSync(intervalMinutes = 30) {
     const ms = intervalMinutes * 60 * 1000
 
-    syncSlotsFromSheet().catch((err) => {
-        console.warn(`[Slot Sync] Initial sync failed — ${err.message}`)
-        console.warn('[Slot Sync] Falling back to dev-seeded slots')
+    syncSlotsFromSheet().catch(err => {
+        console.error(`[Slot Sync] ❌ Initial sync error: ${err.message}`)
     })
 
     const timer = setInterval(() => {
-        syncSlotsFromSheet().catch((err) => {
-            console.warn(`[Slot Sync] Periodic sync failed — ${err.message}`)
+        syncSlotsFromSheet().catch(err => {
+            console.error(`[Slot Sync] ❌ Periodic sync error: ${err.message}`)
         })
     }, ms)
 
     if (timer.unref) timer.unref()
-    console.log(`[Slot Sync] Auto-sync every ${intervalMinutes} min (${process.env.GOOGLE_SHEET_URL ? 'sheet configured ✅' : 'no sheet URL — dev mode'})`)
+    const configured = !!(process.env.GOOGLE_SHEET_ID && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL)
+    console.log(`[Slot Sync] Auto-sync every ${intervalMinutes} min — Sheet ${configured ? 'configured ✅' : '❌ NOT CONFIGURED — slots will be empty'}`)
     return timer
 }
 
