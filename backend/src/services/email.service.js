@@ -67,6 +67,25 @@ async function sendBookingConfirmation(booking) {
         </table>
       </div>
 
+      ${booking.meetUrl ? `
+      <div style="text-align:center; margin: 1.75rem 0 0.5rem;">
+        <a href="${booking.meetUrl}"
+           style="display:inline-block; background:#1a73e8; color:#fff; text-decoration:none;
+                  font-size:1rem; font-weight:600; padding:0.85rem 2rem; border-radius:999px;
+                  font-family:sans-serif; letter-spacing:0.01em;">
+          🎥 Join your session
+        </a>
+        <p style="font-size:0.78rem; color:#8a7d70; margin:0.6rem 0 0;">
+          This Google Meet link is only for your scheduled session on ${selectedSlot?.date} at ${selectedSlot?.time} IST.
+        </p>
+      </div>
+      ` : `
+      <div style="background:#fdf8f3; border:1px solid #e8d9c0; border-radius:10px; padding:1rem 1.25rem; margin:1.5rem 0 0.5rem; font-size:0.88rem; color:#7a6250;">
+        <strong>📋 Session link coming soon</strong><br>
+        Your counsellor will reach out with a video link closer to your session time.
+      </div>
+      `}
+
       <div style="text-align:center; margin: 1.5rem 0;">
         <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/reschedule?bid=${booking.id}"
            style="display:inline-block; background:#8B7355; color:#fff; text-decoration:none; font-size:0.9rem; font-weight:600; padding:0.7rem 1.6rem; border-radius:999px; font-family:sans-serif;">
@@ -198,6 +217,14 @@ async function sendSessionPrepEmail(booking) {
       </div>
 
       ${triageSection}
+
+      ${booking.meetUrl ? `
+      <div style="margin-top: 1.5rem; background: #e8f0fe; border: 1.5px solid #1a73e8; border-radius: 10px; padding: 1rem 1.25rem;">
+        <strong style="color: #1a73e8;">🎥 Google Meet Link</strong><br>
+        <a href="${booking.meetUrl}" style="color: #1557b0; font-size: 0.95rem; word-break: break-all;">${booking.meetUrl}</a>
+        <p style="font-size: 0.8rem; color: #555; margin: 0.4rem 0 0;">The patient has received this same link in their confirmation email.</p>
+      </div>
+      ` : ''}
 
       <p style="font-size: 0.8rem; color: #aaa9a5; margin-top: 2rem; line-height: 1.6; border-top: 1px solid #E8E0D6; padding-top: 1rem;">
         This is an automated internal notification from Thee You Space. Do not forward or share this email — it contains patient information.

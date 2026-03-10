@@ -22,6 +22,7 @@ class Booking {
     this.bookingStatus = data.bookingStatus || 'pending'
     // Triage data — stored as-is, used for session prep email and counsellor notes
     this.triageData = data.triageData || null
+    this.meetUrl = data.meetUrl || null              // Google Meet link (set post-payment)
     this.sessionReminderSent = false   // set true after 24hr reminder fires
     this.rescheduledFrom = data.rescheduledFrom || null  // original bookingId if rescheduled
     this.createdAt = new Date().toISOString()
@@ -56,6 +57,7 @@ class Booking {
     booking.paymentStatus = data.paymentStatus || 'paid'
     booking.bookingStatus = data.bookingStatus || 'confirmed'
     booking.triageData = data.triageData || null
+    booking.meetUrl = data.meetUrl || null
     booking.sessionReminderSent = data.sessionReminderSent || false
     booking.rescheduledFrom = data.rescheduledFrom || null
     booking.createdAt = data.createdAt || new Date().toISOString()
@@ -113,6 +115,7 @@ class Booking {
       paymentStatus: this.paymentStatus,
       bookingStatus: this.bookingStatus,
       triageData: this.triageData,
+      meetUrl: this.meetUrl,
       sessionReminderSent: this.sessionReminderSent,
       rescheduledFrom: this.rescheduledFrom,
       razorpayOrderId: this.razorpayOrderId,

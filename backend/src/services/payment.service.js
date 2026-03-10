@@ -5,6 +5,7 @@ const Booking = require('../models/Booking')
 const { bookSlot, releaseSlot } = require('./calendar.service')
 const { sendBookingConfirmation, sendSessionPrepEmail } = require('./email.service')
 const { removeSlotFromSheet, appendBookingToSheet } = require('./sheetWriteback.service')
+const { createMeetEvent } = require('./calendarMeet.service')
 
 /**
  * Create a payment order for booking
@@ -153,9 +154,24 @@ async function verifyAndProcessPayment(paymentData) {
     })
   }
 
-  // Fire all three non-blocking side-effects in parallel — must not delay or break the payment response
-  const updatedBooking = Booking.findById(booking.id)
+  // Create Google Meet link — await with 10s timeout so it doesn't block payment response
+  // Must happen before emails so the URL is available in the confirmation
+  let updatedBooking = Booking.findById(booking.id)
+  try {
+    const meetUrl = await Promise.race([
+      createMeetEvent(updatedBooking),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000)),
+    ])
+    if (meetUrl) {
+      Booking.updateById(booking.id, { meetUrl })
+      updatedBooking = Booking.findById(booking.id) // re-fetch with meetUrl set
+      console.log(`[MeetEvent] Meet URL stored on booking ${booking.id}`)
+    }
+  } catch (err) {
+    console.error(`[MeetEvent] Failed for booking ${booking.id} — email will send without meet link:`, err.message)
+  }
 
+  // Fire all three non-blocking side-effects in parallel
   Promise.allSettled([
     sendBookingConfirmation(updatedBooking),
     sendSessionPrepEmail(updatedBooking),
