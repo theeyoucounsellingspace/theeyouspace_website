@@ -1,23 +1,45 @@
 /**
  * calendarMeet.service.js
  *
- * Creates a Google Calendar event with an auto-generated Google Meet link
- * for each confirmed booking. The meet URL is stored on the booking and
- * included in the confirmation email.
+ * Two responsibilities:
+ *   1. Generate a unique, secure video meeting URL for the booking (Jitsi Meet).
+ *      No API needed — always works — URL derived from booking ID + HMAC hash.
  *
- * Requirements (one-time setup):
- *   1. Google Calendar API enabled in Google Cloud Console (same project)
- *   2. A shared "Thee You Space Sessions" Google Calendar — service account added as Editor
- *   3. GOOGLE_CALENDAR_ID= in .env
+ *   2. Create a Google Calendar event (no conferencing) on the practice calendar
+ *      so the team sees all sessions in one view. Optional — skipped if
+ *      GOOGLE_CALENDAR_ID is not configured.
  *
- * No GOOGLE_CALENDAR_ID → function returns null silently (email sends without meet link).
+ * Why Jitsi over Google Meet API?
+ *   Google Calendar conferencing (Meet) requires Google Workspace.
+ *   Jitsi (meet.jit.si) is free, open-source, and needs zero API setup.
+ *   The room URL is deterministic from the booking ID — stable, unguessable.
  */
 
 const https = require('https')
 const crypto = require('crypto')
 const { parseSlotDateTime } = require('../utils/dateParser')
 
-// ── Auth — Calendar scope ─────────────────────────────────────────────────────
+// ── 1. Meet URL — Jitsi (no API, always works) ───────────────────────────────
+
+/**
+ * Generates a deterministic Jitsi Meet room URL from the booking ID.
+ * Room name = short HMAC of booking ID → unguessable but stable.
+ * e.g. https://meet.jit.si/TYS-a3f9b1-JeevanKJ
+ */
+function generateMeetUrl(booking) {
+    const secret = process.env.JITSI_SECRET || 'theeyouspace-sessions'
+    const hash = crypto.createHmac('sha256', secret)
+        .update(booking.id)
+        .digest('hex')
+        .slice(0, 8)
+    const proSlug = (booking.professional || 'session')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .slice(0, 20)
+    const room = `TYS-${hash}-${proSlug}`
+    return `https://meet.jit.si/${room}`
+}
+
+// ── 2. Calendar event (no conferencing) — optional ───────────────────────────
 
 async function getCalendarToken() {
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
@@ -30,8 +52,7 @@ async function getCalendarToken() {
         iss: email,
         scope: 'https://www.googleapis.com/auth/calendar',
         aud: 'https://oauth2.googleapis.com/token',
-        exp: now + 3600,
-        iat: now,
+        exp: now + 3600, iat: now,
     }
     const enc = o => Buffer.from(JSON.stringify(o)).toString('base64url')
     const h = enc({ alg: 'RS256', typ: 'JWT' })
@@ -47,9 +68,7 @@ async function getCalendarToken() {
 
     return new Promise((resolve, reject) => {
         const req = https.request({
-            hostname: 'oauth2.googleapis.com',
-            path: '/token',
-            method: 'POST',
+            hostname: 'oauth2.googleapis.com', path: '/token', method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Content-Length': Buffer.byteLength(body),
@@ -61,10 +80,8 @@ async function getCalendarToken() {
                 try {
                     const parsed = JSON.parse(d)
                     if (parsed.access_token) resolve(parsed.access_token)
-                    else reject(new Error(parsed.error_description || 'No access_token in response'))
-                } catch {
-                    reject(new Error('Calendar token parse failed'))
-                }
+                    else reject(new Error(parsed.error_description || 'No access_token'))
+                } catch { reject(new Error('Token parse failed')) }
             })
         })
         req.on('error', reject)
@@ -73,15 +90,11 @@ async function getCalendarToken() {
     })
 }
 
-// ── Calendar API POST ─────────────────────────────────────────────────────────
-
 function calendarPost(path, token, body) {
     const bodyStr = JSON.stringify(body)
     return new Promise((resolve, reject) => {
         const req = https.request({
-            hostname: 'www.googleapis.com',
-            path,
-            method: 'POST',
+            hostname: 'www.googleapis.com', path, method: 'POST',
             headers: {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
@@ -90,9 +103,7 @@ function calendarPost(path, token, body) {
         }, r => {
             let d = ''
             r.on('data', c => d += c)
-            r.on('end', () => {
-                try { resolve(JSON.parse(d)) } catch { resolve(d) }
-            })
+            r.on('end', () => { try { resolve(JSON.parse(d)) } catch { resolve(d) } })
         })
         req.on('error', reject)
         req.write(bodyStr)
@@ -100,121 +111,83 @@ function calendarPost(path, token, body) {
     })
 }
 
-// ── Format IST datetime for Calendar API ─────────────────────────────────────
-
 function toISOist(date) {
-    // Google Calendar needs "+05:30" offset
     const pad = n => String(n).padStart(2, '0')
     const ist = new Date(date.getTime() + (5.5 * 60 * 60 * 1000))
     return `${ist.getUTCFullYear()}-${pad(ist.getUTCMonth() + 1)}-${pad(ist.getUTCDate())}` +
         `T${pad(ist.getUTCHours())}:${pad(ist.getUTCMinutes())}:00+05:30`
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
-
-/**
- * createMeetEvent(booking) → string | null
- *
- * Creates a Google Calendar event with a Google Meet link for the booking.
- * Returns the meet URL string, or null if not configured or on failure.
- *
- * Graceful: never throws — all errors are logged only.
- */
-async function createMeetEvent(booking) {
+async function createCalendarEvent(booking, meetUrl) {
     const calendarId = process.env.GOOGLE_CALENDAR_ID
-    if (!calendarId) {
-        console.log('[MeetEvent] GOOGLE_CALENDAR_ID not set — skipping meet creation')
-        return null
-    }
+    if (!calendarId) return  // optional — skip silently
 
     const slot = booking.selectedSlot || {}
-    if (!slot.date || !slot.time) {
-        console.warn('[MeetEvent] Booking has no selectedSlot date/time — skipping')
-        return null
-    }
-
-    // Parse slot time into a proper Date
     const startDate = parseSlotDateTime(slot.date, slot.time)
-    if (!startDate) {
-        console.warn(`[MeetEvent] Could not parse slot date "${slot.date}" time "${slot.time}" — skipping`)
-        return null
-    }
+    if (!startDate) return
 
-    // Session duration: 60 min normal, 75 min priority
     const durationMs = booking.sessionType === 'priority' ? 75 * 60 * 1000 : 60 * 60 * 1000
     const endDate = new Date(startDate.getTime() + durationMs)
 
     let token
-    try {
-        token = await getCalendarToken()
-    } catch (err) {
-        console.error('[MeetEvent] Auth failed:', err.message)
-        return null
-    }
-    if (!token) {
-        console.error('[MeetEvent] No Calendar token — check service account credentials')
-        return null
-    }
+    try { token = await getCalendarToken() } catch { return }
+    if (!token) return
 
     const eventBody = {
-        summary: `Counselling Session${booking.professional ? ` — ${booking.professional}` : ''}`,
+        summary: `Session — ${booking.professional || 'Counsellor'} & ${booking.name}`,
         description: [
-            `Patient: ${booking.name}`,
-            `Session type: ${booking.sessionType === 'priority' ? 'Priority' : 'Regular'} Session`,
+            `Patient: ${booking.name}  (${booking.email})`,
             `Booking ID: ${booking.id}`,
+            `Session: ${booking.sessionType === 'priority' ? 'Priority' : 'Regular'}`,
+            '',
+            `Video link: ${meetUrl}`,
             '',
             'Booked via Thee You Space',
         ].join('\n'),
         start: { dateTime: toISOist(startDate), timeZone: 'Asia/Kolkata' },
         end: { dateTime: toISOist(endDate), timeZone: 'Asia/Kolkata' },
-        attendees: [
-            { email: booking.email, displayName: booking.name },
-        ],
-        conferenceData: {
-            createRequest: {
-                requestId: `tys-${booking.id}-${Date.now()}`,
-                conferenceSolutionKey: { type: 'hangoutsMeet' },
-            },
-        },
+        location: meetUrl,
         reminders: {
             useDefault: false,
-            overrides: [
-                { method: 'email', minutes: 24 * 60 },  // 24hr email reminder
-                { method: 'popup', minutes: 15 },        // 15min popup
-            ],
+            overrides: [{ method: 'popup', minutes: 15 }],
         },
-        guestsCanModifyEvent: false,
-        guestsCanInviteOthers: false,
     }
 
     try {
         const event = await calendarPost(
-            `/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?conferenceDataVersion=1&sendUpdates=all`,
-            token,
-            eventBody
+            `/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+            token, eventBody
         )
-
         if (event.error) {
-            console.error('[MeetEvent] Calendar API error:', event.error.message || JSON.stringify(event.error))
-            return null
-        }
-
-        // Extract meet link from response
-        const meetUrl = event.hangoutLink
-            || event.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri
-            || null
-
-        if (meetUrl) {
-            console.log(`[MeetEvent] ✅ Meet created for booking ${booking.id}: ${meetUrl}`)
+            console.warn('[CalendarEvent] Could not create event:', event.error.message)
         } else {
-            console.warn('[MeetEvent] Event created but no meet link returned — does the calendar support Meet?')
+            console.log(`[CalendarEvent] ✅ Event added to practice calendar for booking ${booking.id}`)
         }
-
-        return meetUrl
     } catch (err) {
-        console.error('[MeetEvent] Unexpected error:', err.message)
-        return null
+        console.warn('[CalendarEvent] Unexpected error:', err.message)
     }
 }
 
-module.exports = { createMeetEvent }
+// ── Main export ───────────────────────────────────────────────────────────────
+
+/**
+ * createMeetEvent(booking) → string
+ *
+ * Always returns a Jitsi Meet URL immediately (no API call needed).
+ * Also asynchronously creates a Google Calendar event for team visibility.
+ * Never throws, never returns null.
+ */
+async function createMeetEvent(booking) {
+    // 1. Generate meet URL instantly (no API, synchronous)
+    const meetUrl = generateMeetUrl(booking)
+    console.log(`[MeetEvent] ✅ Meet URL generated for ${booking.id}: ${meetUrl}`)
+
+    // 2. Create calendar event in background (non-blocking, optional)
+    createCalendarEvent(booking, meetUrl).catch(err =>
+        console.warn('[CalendarEvent] Background error:', err.message)
+    )
+
+    return meetUrl
+}
+
+module.exports = { createMeetEvent, generateMeetUrl }
