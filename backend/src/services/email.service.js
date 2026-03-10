@@ -263,9 +263,39 @@ module.exports = {
   sendBookingConfirmation,
   sendSessionPrepEmail,
   sendSessionReminder,
+  sendOneHourReminder,
   sendCounsellorMorningBrief,
   sendRescheduleConfirmation,
   sendRescheduleAlert,
+}
+
+// ── 1hr reminder (urgent — session starting soon) ────────────────────────────
+
+async function sendOneHourReminder(booking) {
+  const name = booking.name?.split(' ')[0] || 'there'
+  const slot = booking.selectedSlot || {}
+  const { generateMeetUrl } = require('./calendarMeet.service')
+  const meetUrl = booking.meetUrl || generateMeetUrl(booking)
+
+  const html = `<div style="${BASE}">
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">Starting soon</p>
+    <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.6rem; margin:0 0 1rem; color:#2A2520;">Your session starts in 1 hour</h2>
+    <p style="font-size:1rem; line-height:1.75; color:#5A5248; margin-bottom:1.5rem;">
+      Hi ${name}, your session is coming up at <strong>${slot.time} IST</strong> today.
+    </p>
+    <div style="text-align:center; margin:1rem 0 1.5rem;">
+      <a href="${meetUrl}"
+         style="display:inline-block; background:#1a73e8; color:#fff; text-decoration:none;
+                font-size:1.1rem; font-weight:600; padding:1rem 2.5rem; border-radius:999px;
+                font-family:sans-serif; letter-spacing:0.01em;">
+        🎥 Join your session now
+      </a>
+    </div>
+    <p style="font-size:0.85rem; color:#8a7d70; text-align:center; margin:0;">Booking ID: ${booking.id}</p>
+    <p style="font-size:0.95rem; color:#5A5248; margin:1.5rem 0 0;">Take care,<br><strong>Thee You Space</strong><br><em style="font-size:0.85rem; color:#8a7d70;">where You Open Up</em></p>
+  </div>`
+
+  await _send({ to: booking.email, subject: `Your session starts in 1 hour — Thee You Space`, html, tag: '1hr-reminder', bookingId: booking.id })
 }
 
 // ── Session reminder (24hr before) ────────────────────────────────────────────
@@ -275,11 +305,15 @@ async function sendSessionReminder(booking) {
   const proName = booking.professional || ''
   const slot = booking.selectedSlot || {}
 
+  // Regenerate Jitsi URL (deterministic — same as confirmation email)
+  const { generateMeetUrl } = require('./calendarMeet.service')
+  const meetUrl = booking.meetUrl || generateMeetUrl(booking)
+
   const html = `<div style="${BASE}">
     <p style="font-size:0.85rem; color:#8a7d70; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">Session Reminder</p>
     <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.6rem; margin:0 0 1rem; color:#2A2520;">Your session is tomorrow</h2>
     <p style="font-size:1rem; line-height:1.75; color:#5A5248; margin-bottom:1.5rem;">
-      Hi ${name}, just a reminder that your counselling session is coming up.
+      Hi ${name}, just a reminder that your counselling session is coming up tomorrow.
     </p>
     <div style="${CARD}">
       <table style="width:100%; border-collapse:collapse;">
@@ -290,12 +324,25 @@ async function sendSessionReminder(booking) {
         ${row('Booking ID', booking.id)}
       </table>
     </div>
-    <p style="font-size:0.9rem; color:#5A5248; line-height:1.75; margin:0 0 0.5rem;">
-      If you need to reschedule, please do so at least 24 hours before your session:
+
+    <div style="text-align:center; margin:1.5rem 0 0.5rem;">
+      <a href="${meetUrl}"
+         style="display:inline-block; background:#1a73e8; color:#fff; text-decoration:none;
+                font-size:1rem; font-weight:600; padding:0.85rem 2rem; border-radius:999px;
+                font-family:sans-serif; letter-spacing:0.01em;">
+        🎥 Join your session
+      </a>
+      <p style="font-size:0.78rem; color:#8a7d70; margin:0.5rem 0 0;">
+        Your video link for ${slot.date} at ${slot.time} IST.
+      </p>
+    </div>
+
+    <p style="font-size:0.9rem; color:#5A5248; line-height:1.75; margin:1.5rem 0 0.5rem;">
+      Need to reschedule? You must do so at least 24 hours before your session:
     </p>
-    <div style="text-align:center; margin:1rem 0;">
+    <div style="text-align:center; margin:0.75rem 0;">
       <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/reschedule?bid=${booking.id}"
-         style="display:inline-block; background:#8B7355; color:#fff; text-decoration:none; font-size:0.9rem; font-weight:600; padding:0.7rem 1.6rem; border-radius:999px; font-family:sans-serif;">
+         style="display:inline-block; background:#8B7355; color:#fff; text-decoration:none; font-size:0.85rem; font-weight:600; padding:0.6rem 1.4rem; border-radius:999px; font-family:sans-serif;">
         Reschedule this session
       </a>
     </div>

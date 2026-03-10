@@ -27,11 +27,10 @@ function cleanupPastSlots() {
 // ── Job 2: Session reminder emails ────────────────────────────────────────────
 
 async function sendSessionReminders() {
-    const { sendSessionReminder } = require('./email.service')
+    const { sendSessionReminder, sendOneHourReminder } = require('./email.service')
     const bookings = Booking.getAll().filter(b =>
         b.paymentStatus === 'paid' &&
         b.bookingStatus === 'confirmed' &&
-        !b.sessionReminderSent &&
         b.selectedSlot?.date &&
         b.selectedSlot?.time
     )
@@ -43,11 +42,18 @@ async function sendSessionReminders() {
 
             const hoursUntil = (sessionTime.getTime() - Date.now()) / (1000 * 60 * 60)
 
-            // Send reminder when session is between 24h and 25h away (1-hour window to catch it)
-            if (hoursUntil >= 24 && hoursUntil <= 25) {
+            // 24hr reminder — send when session is 24–25 hours away
+            if (hoursUntil >= 24 && hoursUntil <= 25 && !booking.sessionReminderSent) {
                 await sendSessionReminder(booking)
                 Booking.updateById(booking.id, { sessionReminderSent: true })
-                console.log(`[Scheduler] 📧 Session reminder sent for booking ${booking.id}`)
+                console.log(`[Scheduler] 📧 24hr reminder sent for booking ${booking.id}`)
+            }
+
+            // 1hr reminder — send when session is 1–2 hours away
+            if (hoursUntil >= 1 && hoursUntil <= 2 && !booking.oneHourReminderSent) {
+                await sendOneHourReminder(booking)
+                Booking.updateById(booking.id, { oneHourReminderSent: true })
+                console.log(`[Scheduler] 📧 1hr reminder sent for booking ${booking.id}`)
             }
         } catch (err) {
             console.error(`[Scheduler] Reminder failed for booking ${booking.id}:`, err.message)

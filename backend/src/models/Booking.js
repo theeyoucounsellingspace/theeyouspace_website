@@ -24,6 +24,7 @@ class Booking {
     this.triageData = data.triageData || null
     this.meetUrl = data.meetUrl || null              // Google Meet link (set post-payment)
     this.sessionReminderSent = false   // set true after 24hr reminder fires
+    this.oneHourReminderSent = false   // set true after 1hr reminder fires
     this.rescheduledFrom = data.rescheduledFrom || null  // original bookingId if rescheduled
     this.createdAt = new Date().toISOString()
     this.updatedAt = new Date().toISOString()
@@ -59,6 +60,7 @@ class Booking {
     booking.triageData = data.triageData || null
     booking.meetUrl = data.meetUrl || null
     booking.sessionReminderSent = data.sessionReminderSent || false
+    booking.oneHourReminderSent = data.oneHourReminderSent || false
     booking.rescheduledFrom = data.rescheduledFrom || null
     booking.createdAt = data.createdAt || new Date().toISOString()
     booking.updatedAt = data.updatedAt || new Date().toISOString()
