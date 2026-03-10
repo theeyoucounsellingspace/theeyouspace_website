@@ -65,9 +65,28 @@ async function getPaymentDetails(paymentId) {
   }
 }
 
+/**
+ * Initiate a full refund for a payment
+ * @param {string} paymentId - razorpayPaymentId
+ * @param {number} amountPaise - optional, omit for full refund
+ * @returns {Promise<Object>} Refund object
+ */
+async function initiateRefund(paymentId, amountPaise) {
+  try {
+    const options = amountPaise ? { amount: amountPaise } : {}
+    const refund = await razorpay.payments.refund(paymentId, options)
+    console.log(`[Razorpay] Refund initiated: ${refund.id} for payment ${paymentId}`)
+    return refund
+  } catch (error) {
+    console.error('Razorpay refund error:', error)
+    throw new Error(`Refund failed: ${error.error?.description || error.message}`)
+  }
+}
+
 module.exports = {
   razorpay,
   createOrder,
   verifyPaymentSignature,
   getPaymentDetails,
+  initiateRefund,
 }

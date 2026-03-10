@@ -191,22 +191,23 @@ async function verifyAndProcessPayment(paymentData) {
 }
 
 /**
- * Handle payment failure
- * @param {string} orderId
- * @returns {Object} Updated booking
+ * Handle payment failure — marks booking failed, emails patient immediately.
  */
 function handlePaymentFailure(orderId) {
   const booking = Booking.findByRazorpayOrderId(orderId)
-  if (!booking) {
-    throw new Error('Booking not found')
-  }
+  if (!booking) throw new Error('Booking not found')
 
-  const updates = {
-    paymentStatus: PAYMENT_STATUS.FAILED,
-  }
-  Booking.updateById(booking.id, updates)
+  Booking.updateById(booking.id, { paymentStatus: PAYMENT_STATUS.FAILED })
+  const failed = Booking.findById(booking.id)
 
-  return Booking.findById(booking.id).toJSON()
+  // Fire failure email non-blocking — never delay the payment response
+  const { sendPaymentFailureEmail } = require('./email.service')
+  sendPaymentFailureEmail(failed).catch(err =>
+    console.error(`[PaymentFailure] Email failed for booking ${booking.id}:`, err.message)
+  )
+
+  console.log(`[PaymentFailure] Booking ${booking.id} marked failed — failure email queued`)
+  return failed.toJSON()
 }
 
 module.exports = {

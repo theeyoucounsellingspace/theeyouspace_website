@@ -267,7 +267,188 @@ module.exports = {
   sendCounsellorMorningBrief,
   sendRescheduleConfirmation,
   sendRescheduleAlert,
+  sendPaymentFailureEmail,
+  sendCancellationConfirmation,
+  sendCancellationNoRefund,
+  sendCancellationAlert,
+  sendNoShowFollowUp,
 }
+
+// ── Payment failure (to patient) ─────────────────────────────────────────────
+
+async function sendPaymentFailureEmail(booking) {
+  if (!booking.email) return
+  const name = booking.name?.split(' ')[0] || 'there'
+  const slot = booking.selectedSlot || {}
+
+  const html = `<div style="${BASE}">
+    <p style="font-size:0.85rem; color:#c9523a; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">Payment not completed</p>
+    <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.6rem; margin:0 0 1rem; color:#2A2520;">We couldn't process your payment</h2>
+    <p style="font-size:1rem; line-height:1.75; color:#5A5248; margin-bottom:1.5rem;">
+      Hi ${name}, your payment for the session on <strong>${slot.date}</strong> at <strong>${slot.time}</strong> did not go through.
+      No amount has been charged.
+    </p>
+    <div style="${CARD}">
+      <table style="width:100%; border-collapse:collapse;">
+        ${booking.professional ? row('Counsellor', booking.professional) : ''}
+        ${row('Date', slot.date)}
+        ${row('Time', slot.time)}
+        ${row('Session type', booking.sessionType === 'priority' ? 'Priority Session' : 'Regular Session')}
+      </table>
+    </div>
+    <p style="font-size:0.95rem; color:#5A5248; line-height:1.75; margin-bottom:1rem;">
+      The slot may still be available. Please try booking again:
+    </p>
+    <div style="text-align:center; margin:1rem 0 1.5rem;">
+      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/schedule"
+         style="display:inline-block; background:#8B7355; color:#fff; text-decoration:none;
+                font-size:0.95rem; font-weight:600; padding:0.75rem 1.75rem; border-radius:999px; font-family:sans-serif;">
+        Try booking again
+      </a>
+    </div>
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0;">
+      If you continue to face issues, reply to this email and we'll sort it out.
+    </p>
+    <p style="font-size:0.95rem; color:#5A5248; margin:1.5rem 0 0;">Take care,<br><strong>Thee You Space</strong></p>
+  </div>`
+
+  await _send({ to: booking.email, subject: 'Payment unsuccessful — Thee You Space', html, tag: 'payment-failure', bookingId: booking.id })
+}
+
+// ── Cancellation confirmation — with refund (>24hr) ───────────────────────────
+
+async function sendCancellationConfirmation(booking, refundId) {
+  if (!booking.email) return
+  const name = booking.name?.split(' ')[0] || 'there'
+  const slot = booking.selectedSlot || {}
+  const amount = booking.pricing?.displayAmount || Math.round((booking.pricing?.totalAmount || 0) / 100)
+
+  const html = `<div style="${BASE}">
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">Booking Cancelled</p>
+    <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.6rem; margin:0 0 1rem; color:#2A2520;">Your session has been cancelled</h2>
+    <p style="font-size:1rem; line-height:1.75; color:#5A5248; margin-bottom:1.5rem;">
+      Hi ${name}, your session on <strong>${slot.date}</strong> at <strong>${slot.time}</strong> has been cancelled.
+    </p>
+    <div style="${CARD}">
+      <table style="width:100%; border-collapse:collapse;">
+        ${row('Cancelled slot', `${slot.date} at ${slot.time}`)}
+        ${booking.professional ? row('Counsellor', booking.professional) : ''}
+        ${amount ? row('Refund amount', `₹${amount}`) : ''}
+        ${refundId ? row('Refund ID', refundId) : ''}
+      </table>
+    </div>
+    <p style="font-size:0.95rem; color:#5A5248; line-height:1.75;">
+      A full refund of <strong>₹${amount}</strong> has been initiated to your original payment method.
+      Refunds typically appear within 5–7 business days depending on your bank.
+    </p>
+    <p style="font-size:0.85rem; color:#8a7d70; margin:1rem 0 0;">
+      If you'd like to book another session, we're here whenever you're ready.
+    </p>
+    <p style="font-size:0.95rem; color:#5A5248; margin:1.5rem 0 0;">Take care,<br><strong>Thee You Space</strong><br><em style="font-size:0.85rem; color:#8a7d70;">where You Open Up</em></p>
+  </div>`
+
+  await _send({ to: booking.email, subject: 'Session cancelled & refund initiated — Thee You Space', html, tag: 'cancellation-refund', bookingId: booking.id })
+}
+
+// ── Cancellation — no refund (within 24hr) ────────────────────────────────────
+
+async function sendCancellationNoRefund(booking) {
+  if (!booking.email) return
+  const name = booking.name?.split(' ')[0] || 'there'
+  const slot = booking.selectedSlot || {}
+
+  const html = `<div style="${BASE}">
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">Booking Cancelled</p>
+    <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.6rem; margin:0 0 1rem; color:#2A2520;">Your session has been cancelled</h2>
+    <p style="font-size:1rem; line-height:1.75; color:#5A5248; margin-bottom:1.5rem;">
+      Hi ${name}, your session on <strong>${slot.date}</strong> at <strong>${slot.time}</strong> has been cancelled.
+    </p>
+    <div style="background:#fff8f3; border:1px solid #f0c080; border-radius:10px; padding:1rem 1.25rem; margin-bottom:1.5rem; font-size:0.9rem; color:#7a5a30;">
+      <strong>No refund applies</strong> — cancellations within 24 hours of the session are non-refundable per our policy.
+      If you believe this was an error, please reply to this email.
+    </div>
+    <div style="${CARD}">
+      <table style="width:100%; border-collapse:collapse;">
+        ${row('Cancelled slot', `${slot.date} at ${slot.time}`)}
+        ${booking.professional ? row('Counsellor', booking.professional) : ''}
+        ${row('Booking ID', booking.id)}
+      </table>
+    </div>
+    <p style="font-size:0.95rem; color:#5A5248; margin:1.5rem 0 0;">Take care,<br><strong>Thee You Space</strong><br><em style="font-size:0.85rem; color:#8a7d70;">where You Open Up</em></p>
+  </div>`
+
+  await _send({ to: booking.email, subject: 'Session cancelled — Thee You Space', html, tag: 'cancellation-no-refund', bookingId: booking.id })
+}
+
+// ── Cancellation alert (practice inbox) ──────────────────────────────────────
+
+async function sendCancellationAlert(booking, refundInitiated, refundId) {
+  const to = process.env.NOTIFY_EMAIL || process.env.SMTP_USER
+  if (!to) return
+  const slot = booking.selectedSlot || {}
+  const amount = booking.pricing?.displayAmount || Math.round((booking.pricing?.totalAmount || 0) / 100)
+
+  const html = `<div style="${BASE}">
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">Cancellation Alert</p>
+    <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.5rem; margin:0 0 1rem; color:#2A2520;">Session cancelled by patient</h2>
+    <div style="${CARD}">
+      <table style="width:100%; border-collapse:collapse;">
+        ${row('Booking ID', booking.id)}
+        ${row('Patient', booking.name)}
+        ${row('Email', booking.email)}
+        ${booking.phone ? row('Phone', booking.phone) : ''}
+        ${booking.professional ? row('Counsellor', booking.professional) : ''}
+        ${row('Cancelled slot', `${slot.date} at ${slot.time}`)}
+        ${row('Refund', refundInitiated ? `₹${amount} initiated (Refund ID: ${refundId})` : 'No refund — within 24hr policy')}
+      </table>
+    </div>
+    <p style="font-size:0.8rem; color:#8a7d70; margin:0;">The slot has been released and is available for rebooking.</p>
+  </div>`
+
+  await _send({
+    to,
+    subject: `Cancellation: ${booking.name} · ${slot.date} ${slot.time}${refundInitiated ? ' · Refund sent' : ' · No refund'}`,
+    html,
+    tag: 'cancellation-alert',
+    bookingId: booking.id,
+  })
+}
+
+// ── No-show follow-up (to patient, ~45min after session) ─────────────────────
+
+async function sendNoShowFollowUp(booking) {
+  if (!booking.email) return
+  const name = booking.name?.split(' ')[0] || 'there'
+  const slot = booking.selectedSlot || {}
+
+  const html = `<div style="${BASE}">
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0 0 1rem; text-transform:uppercase; letter-spacing:0.08em;">We missed you</p>
+    <h2 style="font-family:Georgia,serif; font-weight:400; font-size:1.6rem; margin:0 0 1rem; color:#2A2520;">We missed you today, ${name}</h2>
+    <p style="font-size:1rem; line-height:1.75; color:#5A5248; margin-bottom:1.5rem;">
+      It looks like you may have missed your session with
+      <strong>${booking.professional || 'your counsellor'}</strong>
+      that was scheduled for <strong>${slot.time}</strong> today.
+    </p>
+    <p style="font-size:0.95rem; line-height:1.75; color:#5A5248; margin-bottom:1.5rem;">
+      That's okay — life happens. When you're ready, we'd love to find you another time that works.
+    </p>
+    <div style="text-align:center; margin:1rem 0 1.5rem;">
+      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/schedule"
+         style="display:inline-block; background:#8B7355; color:#fff; text-decoration:none;
+                font-size:0.95rem; font-weight:600; padding:0.75rem 1.75rem; border-radius:999px; font-family:sans-serif;">
+        Book your next session
+      </a>
+    </div>
+    <p style="font-size:0.85rem; color:#8a7d70; margin:0;">
+      If you did attend and received this by mistake, please ignore it.
+      Reach us at ${process.env.SMTP_USER || 'theeyoucounsellingspace@gmail.com'} if you need help.
+    </p>
+    <p style="font-size:0.95rem; color:#5A5248; margin:1.5rem 0 0;">Take care,<br><strong>Thee You Space</strong><br><em style="font-size:0.85rem; color:#8a7d70;">where You Open Up</em></p>
+  </div>`
+
+  await _send({ to: booking.email, subject: `We missed you today — Thee You Space`, html, tag: 'no-show', bookingId: booking.id })
+}
+
 
 // ── 1hr reminder (urgent — session starting soon) ────────────────────────────
 

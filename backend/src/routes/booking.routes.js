@@ -8,7 +8,8 @@ const { bookingLimiter, slotLimiter } = require('../middleware/rateLimiter.middl
 const { SESSION_TYPES } = require('../utils/constants')
 const Booking = require('../models/Booking')
 const { isMoreThan24HoursAway } = require('../utils/dateParser')
-const { sendRescheduleConfirmation, sendRescheduleAlert } = require('../services/email.service')
+const { sendRescheduleConfirmation, sendRescheduleAlert, sendCancellationConfirmation, sendCancellationNoRefund, sendCancellationAlert } = require('../services/email.service')
+const { initiateRefund } = require('../utils/razorpay')
 const { removeSlotFromSheet, appendBookingToSheet, updateBookingStatusInSheet } = require('../services/sheetWriteback.service')
 
 /**
@@ -258,6 +259,94 @@ router.post('/:id/reschedule',
     } catch (err) {
       console.error('[Reschedule] Error:', err.message)
       res.status(500).json({ success: false, error: 'Failed to process reschedule' })
+    }
+  }
+)
+
+/**
+ * POST /api/booking/:id/cancel
+ * Cancel a confirmed booking.
+ * Body: { email }
+ * - >24hr before session: full Razorpay refund + cancellation emails
+ * - ≤24hr before session: no refund, cancellation emails with policy notice
+ */
+router.post('/:id/cancel',
+  [body('email').isEmail().withMessage('Valid email required')],
+  async (req, res) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() })
+
+    try {
+      const booking = Booking.findById(req.params.id)
+      if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' })
+
+      // Email ownership check
+      if ((req.body.email || '').toLowerCase() !== booking.email.toLowerCase()) {
+        return res.status(403).json({ success: false, error: 'Email does not match this booking' })
+      }
+
+      // Must be confirmed + paid
+      if (booking.paymentStatus !== 'paid' || booking.bookingStatus !== 'confirmed') {
+        return res.status(400).json({ success: false, error: 'This booking cannot be cancelled in its current state' })
+      }
+
+      const slot = booking.selectedSlot || {}
+      const eligible24hr = isMoreThan24HoursAway(slot.date, slot.time)
+
+      let refundInitiated = false
+      let refundId = null
+
+      // Attempt automatic refund if >24hr
+      if (eligible24hr && booking.razorpayPaymentId) {
+        try {
+          const refund = await initiateRefund(booking.razorpayPaymentId)
+          refundId = refund.id
+          refundInitiated = true
+          console.log(`[Cancel] Refund ${refundId} initiated for booking ${booking.id}`)
+        } catch (err) {
+          // Refund failure must NOT block the cancellation itself
+          console.error(`[Cancel] Refund failed for booking ${booking.id}:`, err.message)
+        }
+      }
+
+      // Mark booking cancelled
+      Booking.updateById(booking.id, {
+        bookingStatus: 'cancelled',
+        cancelledAt: new Date().toISOString(),
+        refundInitiated,
+        refundId,
+      })
+
+      const cancelled = Booking.findById(booking.id)
+
+      // Update sheet + fire emails non-blocking
+      Promise.allSettled([
+        eligible24hr
+          ? sendCancellationConfirmation(cancelled, refundId)
+          : sendCancellationNoRefund(cancelled),
+        sendCancellationAlert(cancelled, refundInitiated, refundId),
+        updateBookingStatusInSheet(booking.id,
+          booking.professional || slot.professional,
+          slot.date, slot.time,
+          refundInitiated ? 'Cancelled+Refunded' : 'Cancelled'
+        ).catch(e => console.error('[Cancel] Sheet update failed:', e.message)),
+      ]).then(results => {
+        results.forEach((r, i) => {
+          if (r.status === 'rejected') console.error(`[Cancel] Side effect ${i} failed:`, r.reason?.message)
+        })
+      })
+
+      return res.json({
+        success: true,
+        refundInitiated,
+        refundId,
+        message: eligible24hr
+          ? `Session cancelled. ${refundInitiated ? 'Full refund initiated — appears in 5–7 business days.' : 'Refund could not be processed automatically — please contact us.'}`
+          : 'Session cancelled. No refund applies as cancellation was within 24 hours.',
+      })
+    } catch (err) {
+      console.error('[Cancel] Error:', err.message)
+      res.status(500).json({ success: false, error: 'Failed to process cancellation' })
     }
   }
 )

@@ -104,6 +104,39 @@ async function sendMorningBrief() {
     console.log(`[Scheduler] 📋 Morning brief sent — ${todayBookings.length} session(s) today`)
 }
 
+
+// ── Job 4: No-show follow-up ───────────────────────────────────────────────────
+
+async function sendNoShowEmails() {
+    const { sendNoShowFollowUp } = require('./email.service')
+    const now = Date.now()
+    const WINDOW_MIN = 45 * 60 * 1000  // 45min after session starts
+    const CUTOFF_MS = 2 * 60 * 60 * 1000  // stop after 2hr
+
+    const bookings = Booking.getAll().filter(b =>
+        b.paymentStatus === 'paid' &&
+        b.bookingStatus === 'confirmed' &&
+        !b.noShowEmailSent &&
+        b.selectedSlot?.date &&
+        b.selectedSlot?.time
+    )
+
+    for (const booking of bookings) {
+        try {
+            const sessionTime = parseSlotDateTime(booking.selectedSlot.date, booking.selectedSlot.time)
+            if (!sessionTime) continue
+            const elapsed = now - sessionTime.getTime()
+            if (elapsed >= WINDOW_MIN && elapsed <= CUTOFF_MS) {
+                await sendNoShowFollowUp(booking)
+                Booking.updateById(booking.id, { noShowEmailSent: true })
+                console.log(`[Scheduler] 📧 No-show follow-up sent for booking ${booking.id}`)
+            }
+        } catch (err) {
+            console.error(`[Scheduler] No-show job failed for ${booking.id}:`, err.message)
+        }
+    }
+}
+
 // ── Check if current IST hour matches target ──────────────────────────────────
 
 function isIstHour(targetHour) {
@@ -121,10 +154,13 @@ function startScheduler() {
             // Job 1: always
             cleanupPastSlots()
 
-            // Job 2: always (checks internally if window applies)
+            // Job 2: reminders (24hr + 1hr windows)
             await sendSessionReminders()
 
-            // Job 3: once per day at 8 AM IST
+            // Job 4: no-show follow-up (45min–2hr after session)
+            await sendNoShowEmails()
+
+            // Job 3: morning brief — once per day at 8 AM IST
             if (isIstHour(8)) {
                 const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
                 const todayKey = `${istNow.getUTCFullYear()}-${istNow.getUTCMonth()}-${istNow.getUTCDate()}`
@@ -142,7 +178,7 @@ function startScheduler() {
     tick()
     const timer = setInterval(tick, 60 * 60 * 1000)
     if (timer.unref) timer.unref() // don't prevent process exit
-    console.log('[Scheduler] ✅ Started — slot cleanup + session reminders + morning brief')
+    console.log('[Scheduler] ✅ Started — slot cleanup | 24hr + 1hr reminders | no-show follow-up | morning brief')
     return timer
 }
 
