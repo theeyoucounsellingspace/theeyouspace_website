@@ -2,9 +2,11 @@
  * Scheduler Service — runs timed background jobs without any cron dependency.
  *
  * Jobs:
- *   1. Stale slot cleanup     — every hour — removes past-date slots from memory
- *   2. Session reminders      — every hour — emails patient 24-25hr before their session
- *   3. Counsellor morning brief — daily at 8 AM IST — emails practice inbox with that day's sessions
+ *   1. Stale slot cleanup        — every hour
+ *   2. Session reminders         — every hour (24hr + 1hr windows)
+ *   3. Morning brief             — daily at 8 AM IST
+ *   4. No-show follow-up         — every hour (45min–2hr after session)
+ *   5. Auto-reseed               — every 6 hours — refills Sheet when slots < 30
  *
  * All jobs are fire-and-forget, non-blocking, non-crashing.
  */
@@ -144,10 +146,44 @@ function isIstHour(targetHour) {
     return istNow.getUTCHours() === targetHour
 }
 
+// ── Job 5: Auto-reseed when slots run low ────────────────────────────────────
+// Runs every 6 hours. If available slots drop below 30, automatically
+// re-runs the seed script to refill the next 14 days — then syncs backend.
+
+const LOW_SLOT_THRESHOLD = 30   // reseed when fewer than this many slots remain
+let lastReseedDate = null       // prevent re-seeding more than once per day
+
+async function autoReseedIfLow() {
+    const available = AvailabilitySlot.getAll().filter(s => s.available).length
+    const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
+    const todayKey = `${istNow.getUTCFullYear()}-${istNow.getUTCMonth()}-${istNow.getUTCDate()}`
+
+    if (available >= LOW_SLOT_THRESHOLD) return  // plenty of slots, skip
+    if (lastReseedDate === todayKey) return       // already reseeded today
+
+    console.log(`[AutoReseed] ⚠️  Only ${available} slots left — auto-reseeding Sheet...`)
+
+    try {
+        // Dynamically require seed function (avoids circular dep on startup)
+        const { seedSlotsToSheet } = require('../utils/slotSeeder')
+        const count = await seedSlotsToSheet()
+        lastReseedDate = todayKey
+        console.log(`[AutoReseed] ✅ ${count} fresh slots written to Sheet`)
+
+        // Trigger an immediate backend sync to load the new slots
+        const { syncSlotsFromSheet } = require('./googleSheets.service')
+        await syncSlotsFromSheet()
+        console.log('[AutoReseed] ✅ Backend synced with fresh slots')
+    } catch (err) {
+        console.error('[AutoReseed] ❌ Failed:', err.message)
+    }
+}
+
 // ── Main scheduler loop ───────────────────────────────────────────────────────
 
 function startScheduler() {
-    let lastBriefDate = null // prevent re-sending brief on same day
+    let lastBriefDate = null  // prevent re-sending brief on same day
+    let reseedTick = 0        // count hourly ticks for 6hr reseed check
 
     const tick = async () => {
         try {
@@ -159,6 +195,13 @@ function startScheduler() {
 
             // Job 4: no-show follow-up (45min–2hr after session)
             await sendNoShowEmails()
+
+            // Job 5: auto-reseed check every 6 hours
+            reseedTick++
+            if (reseedTick >= 6) {
+                reseedTick = 0
+                await autoReseedIfLow()
+            }
 
             // Job 3: morning brief — once per day at 8 AM IST
             if (isIstHour(8)) {
@@ -177,8 +220,8 @@ function startScheduler() {
     // Run immediately on start, then every hour
     tick()
     const timer = setInterval(tick, 60 * 60 * 1000)
-    if (timer.unref) timer.unref() // don't prevent process exit
-    console.log('[Scheduler] ✅ Started — slot cleanup | 24hr + 1hr reminders | no-show follow-up | morning brief')
+    if (timer.unref) timer.unref()
+    console.log('[Scheduler] ✅ Started — cleanup | reminders | no-show | auto-reseed (every 6hr) | morning brief')
     return timer
 }
 
