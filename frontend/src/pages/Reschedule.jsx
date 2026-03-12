@@ -4,20 +4,22 @@ import CalmContainer from '../components/CalmContainer'
 import { API_BASE_URL, CONTACT_EMAIL } from '../utils/constants'
 import './Reschedule.css'
 
-const STEPS = { EMAIL: 'email', SLOTS: 'slots', DONE: 'done', CLOSED: 'closed', ERROR: 'error' }
+const STEPS = { EMAIL: 'email', SLOTS: 'slots', DONE: 'done', CLOSED: 'closed', ERROR: 'error', CANCEL_CONFIRM: 'cancel_confirm', CANCEL_DONE: 'cancel_done' }
 
 function Reschedule() {
     const [searchParams] = useSearchParams()
     const bid = searchParams.get('bid') || ''
+    const isCancelFlow = searchParams.get('action') === 'cancel'
 
     const [step, setStep] = useState(STEPS.EMAIL)
     const [email, setEmail] = useState('')
     const [emailError, setEmailErr] = useState('')
     const [loading, setLoading] = useState(false)
-    const [checkData, setCheckData] = useState(null)   // { name, professional, currentSlot, availableSlots }
-    const [chosen, setChosen] = useState(null)   // { date, time }
+    const [checkData, setCheckData] = useState(null)
+    const [chosen, setChosen] = useState(null)
     const [submitErr, setSubmitErr] = useState('')
     const [serverError, setServerError] = useState('')
+    const [cancelResult, setCancelResult] = useState(null)  // { refundInitiated, refundId, message }
 
     // If no bid in URL, show error immediately
     useEffect(() => {
@@ -45,11 +47,13 @@ function Reschedule() {
             }
             if (!data.eligible) {
                 setCheckData(data)
-                setStep(STEPS.CLOSED)
+                // Cancel flow: show cancel confirm even if >24hr window
+                setStep(isCancelFlow ? STEPS.CANCEL_CONFIRM : STEPS.CLOSED)
                 return
             }
             setCheckData(data)
-            setStep(STEPS.SLOTS)
+            // Cancel flow: skip slot picking, go straight to cancel confirm
+            setStep(isCancelFlow ? STEPS.CANCEL_CONFIRM : STEPS.SLOTS)
         } catch {
             setEmailErr('Could not connect to the server. Please try again.')
         } finally {
@@ -83,14 +87,39 @@ function Reschedule() {
         }
     }
 
+    // ── Step: Cancel booking ─────────────────────────────────────────────────
+
+    const handleCancel = async () => {
+        setLoading(true)
+        setSubmitErr('')
+        try {
+            const res = await fetch(`${API_BASE_URL}/booking/${encodeURIComponent(bid)}/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email.trim() }),
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                setSubmitErr(data.error || 'Could not process cancellation. Please contact us.')
+                return
+            }
+            setCancelResult(data)
+            setStep(STEPS.CANCEL_DONE)
+        } catch {
+            setSubmitErr('Could not connect. Please try again.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     // ── Render ────────────────────────────────────────────────────────────────
 
     if (step === STEPS.ERROR) return (
         <CalmContainer>
             <div className="rs-wrap">
-                <p className="rs-eyebrow">Reschedule</p>
+                <p className="rs-eyebrow">{isCancelFlow ? 'Cancel booking' : 'Reschedule'}</p>
                 <h1 className="rs-title">Link not valid</h1>
-                <p className="rs-body">This reschedule link is invalid or has expired. Please use the link from your original booking confirmation email.</p>
+                <p className="rs-body">This link is invalid or has expired. Please use the link from your original booking confirmation email.</p>
                 <a className="rs-contact" href={`mailto:${CONTACT_EMAIL}`}>Contact us</a>
             </div>
         </CalmContainer>
@@ -99,8 +128,8 @@ function Reschedule() {
     if (step === STEPS.EMAIL) return (
         <CalmContainer>
             <div className="rs-wrap">
-                <p className="rs-eyebrow">Reschedule</p>
-                <h1 className="rs-title">Let's move your session</h1>
+                <p className="rs-eyebrow">{isCancelFlow ? 'Cancel booking' : 'Reschedule'}</p>
+                <h1 className="rs-title">{isCancelFlow ? 'Cancel your session' : 'Let\'s move your session'}</h1>
                 <p className="rs-body">Enter the email address you used when booking to continue.</p>
                 <form className="rs-form" onSubmit={handleVerify} noValidate>
                     <input
@@ -197,6 +226,52 @@ function Reschedule() {
                     Your session has been moved to <strong>{chosen?.date}</strong> at <strong>{chosen?.time}</strong>.
                     A confirmation has been sent to your email.
                 </p>
+            </div>
+        </CalmContainer>
+    )
+
+    if (step === STEPS.CANCEL_CONFIRM) return (
+        <CalmContainer>
+            <div className="rs-wrap">
+                <p className="rs-eyebrow">Cancel booking</p>
+                <h1 className="rs-title">Cancel this session?</h1>
+                <div className="rs-current" style={{ marginBottom: '1.5rem' }}>
+                    <span className="rs-current-label">Session to cancel</span>
+                    <span className="rs-current-val">
+                        {checkData?.currentSlot?.date} · {checkData?.currentSlot?.time}
+                        {checkData?.professional ? ` · ${checkData.professional}` : ''}
+                    </span>
+                </div>
+                <div style={{ background: '#fff8f3', border: '1px solid #f0c080', borderRadius: '10px', padding: '1rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.9rem', color: '#7a5a30' }}>
+                    {checkData?.eligible
+                        ? <>A <strong>full refund</strong> will be initiated automatically to your original payment method (5–7 business days).</>
+                        : <>This session is within 24 hours — <strong>no refund applies</strong> per our policy. Contact us if you believe this is an error.</>}
+                </div>
+                {submitErr && <p className="rs-field-err rs-field-err--center">{submitErr}</p>}
+                <button className="rs-btn-primary" onClick={handleCancel} disabled={loading}
+                    style={{ background: '#c9523a' }}>
+                    {loading ? 'Cancelling…' : 'Yes, cancel this session'}
+                </button>
+                <p style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+                    <a className="rs-link" href={`/reschedule?bid=${bid}`}>Reschedule instead →</a>
+                </p>
+            </div>
+        </CalmContainer>
+    )
+
+    if (step === STEPS.CANCEL_DONE) return (
+        <CalmContainer>
+            <div className="rs-wrap">
+                <div className="rs-success-icon">✓</div>
+                <p className="rs-eyebrow">Cancelled</p>
+                <h1 className="rs-title">Session cancelled</h1>
+                <p className="rs-body">
+                    {cancelResult?.refundInitiated
+                        ? <>A full refund has been initiated. It should appear in your account within <strong>5–7 business days</strong>. Refund ID: <code>{cancelResult.refundId}</code></>
+                        : cancelResult?.message || 'Your session has been cancelled.'}
+                </p>
+                <p className="rs-body">If you need support, we're here whenever you're ready.</p>
+                <a className="rs-contact" href="/schedule">Book a new session →</a>
             </div>
         </CalmContainer>
     )

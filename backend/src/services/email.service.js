@@ -76,7 +76,7 @@ async function sendBookingConfirmation(booking) {
           🎥 Join your session
         </a>
         <p style="font-size:0.78rem; color:#8a7d70; margin:0.6rem 0 0;">
-          This Google Meet link is only for your scheduled session on ${selectedSlot?.date} at ${selectedSlot?.time} IST.
+          Your secure video link for ${selectedSlot?.date} at ${selectedSlot?.time} IST. Opens in browser — no app needed.
         </p>
       </div>
       ` : `
@@ -86,13 +86,23 @@ async function sendBookingConfirmation(booking) {
       </div>
       `}
 
-      <div style="text-align:center; margin: 1.5rem 0;">
+      <div style="text-align:center; margin: 1.5rem 0 0.5rem;">
         <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/reschedule?bid=${booking.id}"
            style="display:inline-block; background:#8B7355; color:#fff; text-decoration:none; font-size:0.9rem; font-weight:600; padding:0.7rem 1.6rem; border-radius:999px; font-family:sans-serif;">
           Reschedule this session
         </a>
         <p style="font-size:0.75rem; color:#8a7d70; margin:0.5rem 0 0;">
           Must be requested at least 24 hours before your session time.
+        </p>
+      </div>
+
+      <div style="text-align:center; margin: 0.75rem 0 1.5rem;">
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/reschedule?bid=${booking.id}&action=cancel"
+           style="font-size:0.8rem; color:#8a7d70; text-decoration:underline; font-family:sans-serif;">
+          Cancel this booking
+        </a>
+        <p style="font-size:0.72rem; color:#aaa; margin:0.3rem 0 0;">
+          Cancellations within 24 hours of the session are non-refundable.
         </p>
       </div>
 
