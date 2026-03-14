@@ -78,7 +78,7 @@ async function createPaymentOrder(bookingData) {
  * @returns {Promise<Object>} Updated booking
  */
 async function verifyAndProcessPayment(paymentData) {
-  const { orderId, paymentId, signature } = paymentData
+  const { orderId, paymentId, signature, bypassSignature = false } = paymentData
 
   console.log(`[Payment Verification] Starting verification for order: ${orderId}, payment: ${paymentId}`)
 
@@ -97,10 +97,14 @@ async function verifyAndProcessPayment(paymentData) {
   }
 
   // Verify payment signature
-  console.log(`[Payment Verification] Verifying signature for booking: ${booking.id}`)
-  if (!verifyPaymentSignature(orderId, paymentId, signature)) {
-    console.error(`[Payment Verification] Invalid signature for booking: ${booking.id}`)
-    throw new Error('Invalid payment signature')
+  if (!bypassSignature) {
+    console.log(`[Payment Verification] Verifying signature for booking: ${booking.id}`)
+    if (!verifyPaymentSignature(orderId, paymentId, signature)) {
+      console.error(`[Payment Verification] Invalid signature for booking: ${booking.id}`)
+      throw new Error('Invalid payment signature')
+    }
+  } else {
+    console.log(`[Payment Verification] Bypassing signature check (verified via webhook) for: ${booking.id}`)
   }
 
   // Fetch payment details from Razorpay

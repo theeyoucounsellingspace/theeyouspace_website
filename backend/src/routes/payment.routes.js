@@ -148,7 +148,8 @@ router.post('/webhook', async (req, res) => {
         await verifyAndProcessPayment({
           orderId: order_id,
           paymentId: paymentId,
-          signature: signature, // Use webhook signature as verification
+          signature: signature,
+          bypassSignature: true // Handled via webhook secret verification above
         })
         console.log(`[Webhook] Payment processed successfully - Order: ${order_id}`)
       } catch (error) {

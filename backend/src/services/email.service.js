@@ -22,6 +22,14 @@ async function sendViaResend(options) {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) throw new Error('RESEND_API_KEY not configured')
 
+  const fromRaw = process.env.SMTP_FROM || `Thee You Space <onboarding@resend.dev>`
+  // Resend requires domain verification for custom 'From' addresses. 
+  // If user hasn't verified a domain and is trying to send FROM a gmail/outlook account, it will fail.
+  // Fallback to the onboarding@resend.dev address for unverified senders.
+  const from = (fromRaw.toLowerCase().includes('gmail.com') || fromRaw.toLowerCase().includes('outlook.com'))
+    ? `Thee You Space <onboarding@resend.dev>`
+    : fromRaw
+
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -29,7 +37,7 @@ async function sendViaResend(options) {
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      from: process.env.SMTP_FROM || `Thee You Space <onboarding@resend.dev>`,
+      from,
       to: [options.to],
       subject: options.subject,
       html: options.html
