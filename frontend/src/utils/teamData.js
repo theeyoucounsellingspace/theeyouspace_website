@@ -52,7 +52,7 @@ export const TEAM_DATA = [
         photo: mohammedPhoto,
         // Mohammed's headshot — zoom in (cover), shift down 15px so face centres in the circle
         photoFit: 'contain',
-        photoPosition: 'center 80%',
+        photoPosition: 'center 100%',
     },
     {
         // Counsellor — appears on Schedule/booking only, NOT on the About page
