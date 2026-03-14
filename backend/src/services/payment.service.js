@@ -2,7 +2,7 @@ const { createOrder, verifyPaymentSignature, getPaymentDetails } = require('../u
 const { getPricing } = require('../utils/pricing.service')
 const { SESSION_TYPES, PAYMENT_STATUS, BOOKING_STATUS } = require('../utils/constants')
 const Booking = require('../models/Booking')
-const { bookSlot, releaseSlot } = require('./calendar.service')
+const { bookSlot, releaseSlot, lockSlot } = require('./calendar.service')
 const { sendBookingConfirmation, sendSessionPrepEmail } = require('./email.service')
 const { removeSlotFromSheet, appendBookingToSheet } = require('./sheetWriteback.service')
 const { createMeetEvent } = require('./calendarMeet.service')
@@ -56,6 +56,9 @@ async function createPaymentOrder(bookingData) {
   })
 
   console.log(`[Order Creation] Razorpay order created: ${order.id} for booking: ${booking.id}`)
+
+  // SOFT LOCK: Hold the slot for 10 mins while user pays
+  lockSlot(selectedSlot.date, selectedSlot.time, selectedSlot.professional || bookingData.professional)
 
   // Update booking with order ID
   booking.razorpayOrderId = order.id
@@ -206,6 +209,12 @@ function handlePaymentFailure(orderId) {
 
   // Fire failure email non-blocking — never delay the payment response
   const { sendPaymentFailureEmail } = require('./email.service')
+  // RELEASE SOFT LOCK: Make slot available again
+  const slot = booking.selectedSlot
+  if (slot) {
+    releaseSlot(slot.date, slot.time, slot.professional || booking.professional)
+  }
+
   sendPaymentFailureEmail(failed).catch(err =>
     console.error(`[PaymentFailure] Email failed for booking ${booking.id}:`, err.message)
   )

@@ -12,7 +12,8 @@ let _slotCounter = 0 // monotonic counter — avoids Date.now() collisions when 
 class AvailabilitySlot {
 
   static getAll() {
-    return slots.filter((s) => s.available)
+    const now = Date.now()
+    return slots.filter((s) => s.available && (!s.pendingUntil || s.pendingUntil < now))
   }
 
   static getAllIncludingBooked() {
@@ -29,8 +30,13 @@ class AvailabilitySlot {
    * when a professional is known.
    */
   static findByProfessionalDateTime(professional, date, time) {
+    const now = Date.now()
     return slots.find(
-      (s) => s.professional === professional && s.date === date && s.time === time
+      (s) => s.professional === professional &&
+        s.date === date &&
+        s.time === time &&
+        s.available &&
+        (!s.pendingUntil || s.pendingUntil < now)
     )
   }
 
@@ -53,12 +59,22 @@ class AvailabilitySlot {
     return false
   }
 
+  static lockSlot(id, minutes = 10) {
+    const slot = slots.find(s => s.id === id)
+    if (slot && slot.available) {
+      slot.pendingUntil = Date.now() + (minutes * 60 * 1000)
+      return true
+    }
+    return false
+  }
+
   static releaseSlot(id) {
-    const slot = this.getById(id)
+    const slot = slots.find(s => s.id === id)
     if (slot) {
       slot.available = true
       slot.bookedBy = null
       slot.bookedAt = null
+      slot.pendingUntil = null
       return true
     }
     return false

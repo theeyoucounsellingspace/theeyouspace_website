@@ -49,11 +49,17 @@ function bookSlot(date, time, bookingId, professional) {
  * @returns {boolean} Success status
  */
 function releaseSlot(date, time, professional) {
-  const slot = professional
-    ? AvailabilitySlot.findByProfessionalDateTime(professional, date, time)
-    : AvailabilitySlot.findByDateTime(date, time)
+  const slot = AvailabilitySlot.findByProfessionalDateTime(professional, date, time)
   if (slot) {
     return AvailabilitySlot.releaseSlot(slot.id)
+  }
+  return false
+}
+
+function lockSlot(date, time, professional) {
+  const slot = AvailabilitySlot.findByProfessionalDateTime(professional, date, time)
+  if (slot) {
+    return AvailabilitySlot.lockSlot(slot.id, 10)
   }
   return false
 }
@@ -63,4 +69,5 @@ module.exports = {
   isSlotAvailable,
   bookSlot,
   releaseSlot,
+  lockSlot,
 }
