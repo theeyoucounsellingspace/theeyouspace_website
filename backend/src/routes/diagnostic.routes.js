@@ -59,7 +59,8 @@ async function testSMTP() {
     });
 
     try {
-        await transporter.verify();
+        const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('SMTP Verification Timeout (10s)')), 10000));
+        await Promise.race([transporter.verify(), timeoutPromise]);
         return { success: true };
     } catch (e) {
         return { success: false, error: e.message, code: e.code };
