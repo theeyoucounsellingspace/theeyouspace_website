@@ -12,6 +12,7 @@ const priorityRoutes = require('./routes/priority.routes')
 const exportRoutes = require('./routes/export.routes')
 const slotsRoutes = require('./routes/slots.routes')
 const professionalsRoutes = require('./routes/professionals.routes')
+const diagnosticRoutes = require('./routes/diagnostic.routes')
 
 // Google Sheets sync
 const { syncSlotsFromSheet } = require('./services/googleSheets.service')
@@ -118,6 +119,7 @@ app.use('/api/priority', priorityRoutes)
 app.use('/api/export', exportRoutes)
 app.use('/api/slots', slotsRoutes)
 app.use('/api/professionals', professionalsRoutes)
+app.use('/api', diagnosticRoutes) // add diagnostic under /api/diagnostic
 
 // ===== ERROR HANDLING =====
 
