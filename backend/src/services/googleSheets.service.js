@@ -30,13 +30,12 @@ async function getSAToken() {
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
     const rawKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
     if (!email || !rawKey) return null
-    // Handle all key formats:
-    //   • Render env vars store literal \n  → replace \n with newline
-    //   • dotenv stores \\n               → also replace
-    //   • already has real newlines        → no-op
+
+    // Handle all key formats and accidental quotes
     const privateKey = rawKey
-        .replace(/\\n/g, '\n')   // dotenv escaped form: \\n → \n
-        .replace(/\n/g, '\n')    // any remaining literal \n → real newline
+        .replace(/^["']|["']$/g, '') // Remove wrapping quotes if pasted in
+        .replace(/\\n/g, '\n')       // dotenv escaped form: \\n → \n
+        .replace(/\n/g, '\n')        // any remaining literal \n → real newline
     if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
         console.error('[Slot Sync] ❌ GOOGLE_SERVICE_ACCOUNT_KEY does not look like a valid PEM key — check Render env var')
         return null
