@@ -100,7 +100,8 @@ router.get('/diagnostic', async (req, res) => {
         frontendUrl: process.env.FRONTEND_URL,
         authResult: authResult ? (authResult.error_thrown ? authResult.error_thrown : (authResult.access_token ? 'valid_token' : authResult)) : null,
         sheetResult,
-        smtpResult
+        smtpResult,
+        smtpUser: process.env.SMTP_USER ? (process.env.SMTP_USER.slice(0, 3) + '***' + process.env.SMTP_USER.slice(-4)) : 'NOT_SET'
     })
 })
 
