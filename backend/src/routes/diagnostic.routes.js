@@ -101,7 +101,11 @@ router.get('/diagnostic', async (req, res) => {
         authResult: authResult ? (authResult.error_thrown ? authResult.error_thrown : (authResult.access_token ? 'valid_token' : authResult)) : null,
         sheetResult,
         smtpResult,
-        smtpUser: process.env.SMTP_USER ? (process.env.SMTP_USER.slice(0, 3) + '***' + process.env.SMTP_USER.slice(-4)) : 'NOT_SET'
+        smtpUser: process.env.SMTP_USER ? (process.env.SMTP_USER.slice(0, 3) + '***' + process.env.SMTP_USER.slice(-4)) : 'NOT_SET',
+        smtpConfig: {
+            host: process.env.SMTP_HOST || 'smtp.gmail.com',
+            port: process.env.SMTP_PORT || '587'
+        }
     })
 })
 
