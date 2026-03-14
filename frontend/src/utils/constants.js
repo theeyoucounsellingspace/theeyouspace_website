@@ -17,7 +17,6 @@ export const ROUTES = {
   SCHEDULE: '/schedule',
   DETAILS_PAYMENT: '/details-payment',
   CONFIRMATION: '/confirmation',
-  PRIORITY: '/priority',
   SAFETY: '/safety',
   ABOUT: '/about',
   RESCHEDULE: '/reschedule',

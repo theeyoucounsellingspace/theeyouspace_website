@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ROUTES } from '../utils/constants'
 import './Triage.css'
 
@@ -40,6 +40,8 @@ const TOTAL = 4
 
 function Triage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const initialUrgency = location.state?.urgency || 'normal'
   const [step, setStep] = useState(1)
   const [concern, setConcern] = useState(null)
   const [duration, setDuration] = useState(null)
@@ -154,7 +156,9 @@ function Triage() {
         {/* ── Step 4 — urgency ── */}
         {step === 4 && (
           <>
-            <h2 className="triage-q">How soon do you need support?</h2>
+            <h2 className="triage-q">
+              {initialUrgency === 'priority' ? "Since you need support soon..." : "How soon do you need support?"}
+            </h2>
             <p className="triage-hint">Both paths lead to a real session with a trained counsellor.</p>
 
             {/* Option 1 — Standard */}
@@ -171,7 +175,7 @@ function Triage() {
 
             {/* Option 2 — Priority */}
             <button
-              className="triage-option urgency-option urgency-option--priority"
+              className={`triage-option urgency-option urgency-option--priority ${initialUrgency === 'priority' ? 'recommended' : ''}`}
               onClick={() => handleUrgency('priority')}
             >
               <div className="urgency-header">
@@ -179,11 +183,14 @@ function Triage() {
                 <span className="urgency-badge urgency-badge--priority">Higher rate · Faster</span>
               </div>
               <span className="opt-desc">
-                You'll move up the queue. We'll reach out quickly to confirm your slot.
+                {initialUrgency === 'priority'
+                  ? "As you requested, we'll move you to the front of the queue and reach out quickly to confirm your slot."
+                  : "Move up the queue. We'll reach out quickly to confirm your slot."}
               </span>
+              {initialUrgency === 'priority' && <span className="recommended-tag">Requested by you</span>}
             </button>
 
-            {/* WhatsApp gate — number never shown, only revealed after deliberate click */}
+            {/* WhatsApp gate — repositioned as "Help/Emergency" instead of "Bypass" */}
             <div className="urgency-wa-gate">
               {!showWaGate ? (
                 <button
@@ -191,12 +198,12 @@ function Triage() {
                   onClick={() => setShowWaGate(true)}
                   aria-expanded="false"
                 >
-                  Can't even wait? →
+                  Technical issues or need help? →
                 </button>
               ) : (
                 <div className="urgency-wa-panel" role="region" aria-label="WhatsApp contact">
                   <p className="urgency-wa-text">
-                    Send us a message on WhatsApp — just say <strong>Hi</strong> and we'll respond as fast as we can.
+                    Facing trouble with the website? Send us a "Hi" on WhatsApp and we'll help you out manually.
                   </p>
                   <a
                     href={WA_LINK}
@@ -205,7 +212,7 @@ function Triage() {
                     className="urgency-wa-btn"
                     aria-label="Open WhatsApp to message us"
                   >
-                    Message us on WhatsApp
+                    Help via WhatsApp
                   </a>
                   <p className="urgency-wa-disclaimer">
                     This is not a crisis helpline. If you are in immediate danger, please call 112.

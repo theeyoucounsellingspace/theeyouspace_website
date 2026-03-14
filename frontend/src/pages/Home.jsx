@@ -26,7 +26,7 @@ function Home() {
             </Button>
             <Button
               variant="secondary"
-              onClick={() => navigate(ROUTES.PRIORITY)}
+              onClick={() => navigate(ROUTES.TRIAGE, { state: { urgency: 'priority' } })}
             >
               Book a session "now"
             </Button>

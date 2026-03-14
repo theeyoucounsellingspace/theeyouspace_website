@@ -7,7 +7,6 @@ import Matching from './pages/Matching'
 import Schedule from './pages/Schedule'
 import DetailsPayment from './pages/DetailsPayment'
 import Confirmation from './pages/Confirmation'
-import Priority from './pages/Priority'
 import Safety from './pages/Safety'
 import About from './pages/About'
 import Reschedule from './pages/Reschedule'
@@ -26,7 +25,6 @@ function App() {
           <Route path={ROUTES.SCHEDULE} element={<Schedule />} />
           <Route path={ROUTES.DETAILS_PAYMENT} element={<DetailsPayment />} />
           <Route path={ROUTES.CONFIRMATION} element={<Confirmation />} />
-          <Route path={ROUTES.PRIORITY} element={<Priority />} />
           <Route path={ROUTES.SAFETY} element={<Safety />} />
           <Route path={ROUTES.ABOUT} element={<About />} />
           <Route path={ROUTES.RESCHEDULE} element={<Reschedule />} />

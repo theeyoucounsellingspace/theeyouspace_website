@@ -382,3 +382,21 @@
   margin: 0.75rem 0 0;
   line-height: 1.5;
 }
+
+/* ── Recommended state for priority ── */
+.urgency-option.recommended {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  border-left-color: #b07030;
+  border-left-width: 4px;
+}
+
+.recommended-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #b07030;
+  margin-top: 0.5rem;
+  letter-spacing: 0.04em;
+}
