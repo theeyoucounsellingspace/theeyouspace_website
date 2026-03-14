@@ -30,7 +30,17 @@ async function getSAToken() {
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
     const rawKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
     if (!email || !rawKey) return null
-    const privateKey = rawKey.replace(/\\n/g, '\n')
+    // Handle all key formats:
+    //   • Render env vars store literal \n  → replace \n with newline
+    //   • dotenv stores \\n               → also replace
+    //   • already has real newlines        → no-op
+    const privateKey = rawKey
+        .replace(/\\n/g, '\n')   // dotenv escaped form: \\n → \n
+        .replace(/\n/g, '\n')    // any remaining literal \n → real newline
+    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        console.error('[Slot Sync] ❌ GOOGLE_SERVICE_ACCOUNT_KEY does not look like a valid PEM key — check Render env var')
+        return null
+    }
     const now = Math.floor(Date.now() / 1000)
     const payload = { iss: email, scope: 'https://www.googleapis.com/auth/spreadsheets', aud: 'https://oauth2.googleapis.com/token', exp: now + 3600, iat: now }
     const enc = o => Buffer.from(JSON.stringify(o)).toString('base64url')

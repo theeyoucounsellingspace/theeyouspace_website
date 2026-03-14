@@ -55,8 +55,11 @@ function generateSlots() {
 
 async function getToken() {
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-    const rawKey = (process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '').replace(/\\n/g, '\n')
-    if (!email || !rawKey) throw new Error('Missing service account credentials')
+    const rawKey = (process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '')
+    const privateKey = rawKey
+        .replace(/\\n/g, '\n')  // dotenv escaped: \\n → \n
+        .replace(/\n/g, '\n')   // Render literal: \n → newline
+    if (!email || !privateKey.includes('-----BEGIN PRIVATE KEY-----')) throw new Error('Missing service account credentials')
 
     const now = Math.floor(Date.now() / 1000)
     const payload = { iss: email, scope: 'https://www.googleapis.com/auth/spreadsheets', aud: 'https://oauth2.googleapis.com/token', exp: now + 3600, iat: now }
@@ -64,7 +67,7 @@ async function getToken() {
     const h = enc({ alg: 'RS256', typ: 'JWT' }), b = enc(payload)
     const sgn = crypto.createSign('RSA-SHA256')
     sgn.update(`${h}.${b}`)
-    const jwt = `${h}.${b}.${sgn.sign(rawKey, 'base64url')}`
+    const jwt = `${h}.${b}.${sgn.sign(privateKey, 'base64url')}`
     const body = new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }).toString()
 
     return new Promise((res, rej) => {
