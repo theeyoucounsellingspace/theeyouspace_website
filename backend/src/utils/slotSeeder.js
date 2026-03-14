@@ -5,9 +5,9 @@
  *   - scheduler.service.js (auto-reseed when slots run low)
  *   - backend/scripts/seed-slots.js (manual CLI run)
  *
- * Generates 14 days of slots for all 5 professionals and writes them
- * to the Google Sheet Slots tab. Clears existing rows first.
- * Returns the count of slots written.
+ * Generates 14 days of slots for all professionals and writes them
+ * to the Google Sheet Slots tab. Only appends MISSING slots (additive).
+ * Returns the count of slots added.
  */
 
 const https = require('https')
@@ -101,20 +101,64 @@ async function seedSlotsToSheet() {
     if (!sheetId) throw new Error('GOOGLE_SHEET_ID not set')
 
     const token = await getToken()
-    const slotRows = generateSlots()
-    const allValues = [['Professional', 'Date', 'Time'], ...slotRows]
-    const range = `Slots!A1:C${allValues.length}`
 
-    // Clear then write
+    // 1. Read existing slots
+    let existingRows = []
+    try {
+        const resp = await sheetsReq('GET', `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Slots')}`, token)
+        existingRows = resp.values || []
+    } catch (err) {
+        console.warn('[SlotSeeder] Could not read existing slots, proceeding carefully...')
+    }
+
+    // 2. Filter out past slots from the sheet to keep it lean (Retention Policy)
+    // We keep slots from "Today" onwards
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Header row preserved
+    const header = existingRows[0] || ['Professional', 'Date', 'Time']
+    const futureRows = existingRows.slice(1).filter(r => {
+        const [d, m, y] = (r[1] || '').split('/').map(Number)
+        if (!d || !m || !y) return true // keep rows we can't parse
+        const slotDate = new Date(y, m - 1, d)
+        return slotDate >= today
+    })
+
+    // Set of "Professional|Date|Time" strings for O(1) lookup
+    const existingKeys = new Set(
+        futureRows.map(r => `${(r[0] || '').trim()}|${(r[1] || '').trim()}|${(r[2] || '').trim()}`)
+    )
+
+    // 3. Generate target slots and filter out those that already exist
+    const generated = generateSlots()
+    const missingOnly = generated.filter(row => {
+        const key = `${row[0]}|${row[1]}|${row[2]}`
+        return !existingKeys.has(key)
+    })
+
+    if (missingOnly.length === 0 && futureRows.length === (existingRows.length - 1)) {
+        console.log('[SlotSeeder] No changes needed — sheet is already up to date.')
+        return 0
+    }
+
+    // 4. Update the sheet: Rewrite with Future Rows + Missing Rows
+    // We rewrite the entire sheet to purge the old slots
+    const allRows = [header, ...futureRows, ...missingOnly]
+
+    // Clear first to avoid leftover rows if sheet shrank
     await sheetsReq('POST', `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Slots')}:clear`, token, {})
+
+    const range = `Slots!A1:C${allRows.length}`
     const resp = await sheetsReq('PUT',
         `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`,
         token,
-        { range, majorDimension: 'ROWS', values: allValues }
+        { range, majorDimension: 'ROWS', values: allRows }
     )
 
-    if (resp.error) throw new Error(`Sheet write failed: ${resp.error.message}`)
-    return slotRows.length
+    if (resp.error) throw new Error(`Sheet update failed: ${resp.error.message}`)
+    console.log(`[SlotSeeder] ✅ Sheet updated. Kept ${futureRows.length} future slots, added ${missingOnly.length} new ones, purged old ones.`)
+    return missingOnly.length
 }
 
 module.exports = { seedSlotsToSheet, generateSlots, SLOT_CONFIG }
