@@ -116,13 +116,13 @@ async function sendBookingConfirmation(booking) {
           🎥 Join your session
         </a>
         <p style="font-size:0.78rem; color:#8a7d70; margin:0.6rem 0 0;">
-          Your secure video link for ${selectedSlot?.date} at ${selectedSlot?.time} IST. Opens in browser — no app needed.
+          Your secure session link for ${selectedSlot?.date} at ${selectedSlot?.time} IST. Opens in browser — no app needed.
         </p>
       </div>
       ` : `
       <div style="background:#fdf8f3; border:1px solid #e8d9c0; border-radius:10px; padding:1rem 1.25rem; margin:1.5rem 0 0.5rem; font-size:0.88rem; color:#7a6250;">
         <strong>📋 Session link coming soon</strong><br>
-        Your counsellor will reach out with a video link closer to your session time.
+        Your secure session link will be sent to you closer to the session time.
       </div>
       `}
 
@@ -270,9 +270,9 @@ async function sendSessionPrepEmail(booking) {
 
       ${booking.meetUrl ? `
       <div style="margin-top: 1.5rem; background: #e8f0fe; border: 1.5px solid #1a73e8; border-radius: 10px; padding: 1rem 1.25rem;">
-        <strong style="color: #1a73e8;">🎥 Google Meet Link</strong><br>
+        <strong style="color: #1a73e8;">🎥 Session Link (Jitsi)</strong><br>
         <a href="${booking.meetUrl}" style="color: #1557b0; font-size: 0.95rem; word-break: break-all;">${booking.meetUrl}</a>
-        <p style="font-size: 0.8rem; color: #555; margin: 0.4rem 0 0;">The patient has received this same link in their confirmation email.</p>
+        <p style="font-size: 0.8rem; color: #555; margin: 0.4rem 0 0;">The patient has received this same link in their confirmation email. You can use this to join the session.</p>
       </div>
       ` : ''}
 

@@ -161,22 +161,18 @@ async function verifyAndProcessPayment(paymentData) {
     })
   }
 
-  // Create Google Meet link — await with 10s timeout so it doesn't block payment response
-  // Must happen before emails so the URL is available in the confirmation
+  // Create Google Meet link — non-blocking background task
+  // We generate the URL instantly (deterministic) so we don't need to wait for Calendar API
   let updatedBooking = Booking.findById(booking.id)
-  try {
-    const meetUrl = await Promise.race([
-      createMeetEvent(updatedBooking),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000)),
-    ])
-    if (meetUrl) {
-      Booking.updateById(booking.id, { meetUrl })
-      updatedBooking = Booking.findById(booking.id) // re-fetch with meetUrl set
-      console.log(`[MeetEvent] Meet URL stored on booking ${booking.id}`)
-    }
-  } catch (err) {
-    console.error(`[MeetEvent] Failed for booking ${booking.id} — email will send without meet link:`, err.message)
-  }
+  const meetUrl = generateMeetUrl(updatedBooking)
+  Booking.updateById(booking.id, { meetUrl })
+  updatedBooking = Booking.findById(booking.id) // update local ref
+  console.log(`[MeetEvent] Session URL generated: ${meetUrl}`)
+
+  // Trigger calendar event creation in the background
+  createMeetEvent(updatedBooking).catch(err => {
+    console.error(`[MeetEvent] Background task failed:`, err.message)
+  })
 
   // Fire all three non-blocking side-effects in parallel
   Promise.allSettled([
