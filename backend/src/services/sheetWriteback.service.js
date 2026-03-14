@@ -153,7 +153,7 @@ async function removeSlotFromSheet(professional, date, time) {
     }
 
     // 1. Read all values from the sheet
-    const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1`
+    const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Slots')}`
     let rows
     try {
         const resp = await getJson(readUrl, token)
