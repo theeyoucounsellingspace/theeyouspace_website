@@ -46,6 +46,26 @@ async function testSheetAccess(token, sheetId) {
     })
 }
 
+async function testSMTP() {
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: false, // STARTTLS on port 587
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+        },
+    });
+
+    try {
+        await transporter.verify();
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: e.message, code: e.code };
+    }
+}
+
 
 router.get('/diagnostic', async (req, res) => {
     const k = process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '';
@@ -53,6 +73,10 @@ router.get('/diagnostic', async (req, res) => {
 
     let authResult = null;
     let sheetResult = null;
+    let smtpResult = null;
+
+    smtpResult = await testSMTP();
+
     if (k && email) {
         authResult = await testAuth(email, k);
         const cleanSheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
@@ -74,7 +98,8 @@ router.get('/diagnostic', async (req, res) => {
         razorpayKeyIdLen: (process.env.RAZORPAY_KEY_ID || '').length,
         frontendUrl: process.env.FRONTEND_URL,
         authResult: authResult ? (authResult.error_thrown ? authResult.error_thrown : (authResult.access_token ? 'valid_token' : authResult)) : null,
-        sheetResult
+        sheetResult,
+        smtpResult
     })
 })
 
