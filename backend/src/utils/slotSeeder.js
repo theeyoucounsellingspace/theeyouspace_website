@@ -97,7 +97,7 @@ function sheetsReq(method, path, token, body) {
  * Returns the number of slot rows written.
  */
 async function seedSlotsToSheet() {
-    const sheetId = process.env.GOOGLE_SHEET_ID
+    const sheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
     if (!sheetId) throw new Error('GOOGLE_SHEET_ID not set')
 
     const token = await getToken()

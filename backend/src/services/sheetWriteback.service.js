@@ -137,7 +137,7 @@ async function getJson(url, token) {
  * @returns {Promise<{removed: boolean, reason: string}>}
  */
 async function removeSlotFromSheet(professional, date, time) {
-    const sheetId = (process.env.GOOGLE_SHEET_ID || '').trim()
+    const sheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
     if (!sheetId) {
         return { removed: false, reason: 'GOOGLE_SHEET_ID not set — skipping write-back' }
     }
@@ -254,7 +254,7 @@ module.exports = { removeSlotFromSheet, appendBookingToSheet, updateBookingStatu
  */
 async function restoreBookingsFromSheet() {
     const Booking = require('../models/Booking')
-    const sheetId = (process.env.GOOGLE_SHEET_ID || '').trim()
+    const sheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
     if (!sheetId) {
         console.log('[BookingRestore] GOOGLE_SHEET_ID not set — skipping restore')
         return 0
@@ -348,7 +348,7 @@ async function restoreBookingsFromSheet() {
  * Non-throwing — all failures are logged only.
  */
 async function updateBookingStatusInSheet(bookingId, professional, date, time, newStatus) {
-    const sheetId = (process.env.GOOGLE_SHEET_ID || '').trim()
+    const sheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
     if (!sheetId || !bookingId) return
 
     let token
@@ -510,7 +510,7 @@ async function putJson(url, token, body) {
  * Non-throwing  — all errors are logged, not re-raised.
  */
 async function appendBookingToSheet(booking) {
-    const sheetId = (process.env.GOOGLE_SHEET_ID || '').trim()
+    const sheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
     if (!sheetId) {
         console.warn('[SheetWriteback] GOOGLE_SHEET_ID not set — skipping booking writeback')
         return

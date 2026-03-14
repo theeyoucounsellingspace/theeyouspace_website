@@ -55,8 +55,9 @@ router.get('/diagnostic', async (req, res) => {
     let sheetResult = null;
     if (k && email) {
         authResult = await testAuth(email, k);
-        if (authResult?.access_token && process.env.GOOGLE_SHEET_ID) {
-            sheetResult = await testSheetAccess(authResult.access_token, process.env.GOOGLE_SHEET_ID);
+        const cleanSheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
+        if (authResult?.access_token && cleanSheetId) {
+            sheetResult = await testSheetAccess(authResult.access_token, cleanSheetId);
         }
     }
 

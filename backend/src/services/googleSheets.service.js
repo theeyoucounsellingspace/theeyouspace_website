@@ -275,7 +275,7 @@ function parseCsvToSlots(csvText) {
  * No CSV fallback. No dev-seed fallback. Sheet-first and only.
  */
 async function syncSlotsFromSheet() {
-    const sheetId = process.env.GOOGLE_SHEET_ID
+    const sheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
 
     if (!sheetId || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
         console.error('[Slot Sync] ❌ GOOGLE_SHEET_ID / GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_SERVICE_ACCOUNT_KEY not set.')
