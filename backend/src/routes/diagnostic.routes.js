@@ -28,14 +28,36 @@ async function testAuth(email, rawKey) {
     }
 }
 
+async function testSheetAccess(token, sheetId) {
+    return new Promise((res) => {
+        const req = https.request({
+            hostname: 'sheets.googleapis.com',
+            path: `/v4/spreadsheets/${sheetId}?includeGridData=false`,
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` }
+        }, r => {
+            let d = ''; r.on('data', c => d += c);
+            r.on('end', () => {
+                try { res({ status: r.statusCode, data: JSON.parse(d) }) } catch (e) { res({ status: r.statusCode, data: d }) }
+            })
+        });
+        req.on('error', (e) => res({ status: 500, error: e.message }));
+        req.end();
+    })
+}
+
 
 router.get('/diagnostic', async (req, res) => {
     const k = process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '';
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
 
     let authResult = null;
+    let sheetResult = null;
     if (k && email) {
         authResult = await testAuth(email, k);
+        if (authResult?.access_token && process.env.GOOGLE_SHEET_ID) {
+            sheetResult = await testSheetAccess(authResult.access_token, process.env.GOOGLE_SHEET_ID);
+        }
     }
 
     res.json({
@@ -50,7 +72,8 @@ router.get('/diagnostic', async (req, res) => {
         keyContainsEscapedNewline: k.includes('\\n'),
         razorpayKeyIdLen: (process.env.RAZORPAY_KEY_ID || '').length,
         frontendUrl: process.env.FRONTEND_URL,
-        authResult
+        authResult: authResult ? (authResult.error_thrown ? authResult.error_thrown : (authResult.access_token ? 'valid_token' : authResult)) : null,
+        sheetResult
     })
 })
 
