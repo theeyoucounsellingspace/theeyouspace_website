@@ -59,9 +59,19 @@ async function testSMTP() {
     });
 
     try {
+        const net = require('net');
+        const socketTest = new Promise((res) => {
+            const socket = net.createConnection(587, 'smtp.gmail.com');
+            socket.setTimeout(5000);
+            socket.on('connect', () => { socket.destroy(); res({ success: true }); });
+            socket.on('error', (e) => { res({ success: false, error: e.message }); });
+            socket.on('timeout', () => { socket.destroy(); res({ success: false, error: 'Socket Timeout (5s)' }); });
+        });
+        const smtpSocket = await socketTest;
+
         const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('SMTP Verification Timeout (10s)')), 10000));
         await Promise.race([transporter.verify(), timeoutPromise]);
-        return { success: true };
+        return { success: true, socket: smtpSocket };
     } catch (e) {
         return { success: false, error: e.message, code: e.code };
     }
