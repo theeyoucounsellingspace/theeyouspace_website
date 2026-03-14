@@ -27,6 +27,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler.mid
 const requestLogger = require('./middleware/requestLogger.middleware')
 
 const app = express()
+app.set('trust proxy', 1) // Required for Render load balancer to work with rate limiting
 const PORT = process.env.PORT || 3000
 
 // ===== SECURITY MIDDLEWARE =====

@@ -130,7 +130,8 @@ router.post('/webhook', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid webhook signature' })
     }
 
-    const event = JSON.parse(req.body.toString())
+    // req.body is already parsed by express.json() in server.js
+    const event = req.body
     const { event: eventType, payload } = event
 
     console.log(`[Webhook] Event type: ${eventType}`)

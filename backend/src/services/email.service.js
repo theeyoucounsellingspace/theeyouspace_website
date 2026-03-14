@@ -13,6 +13,36 @@ const transporter = nodemailer.createTransport({
   timeout: 10000, // 10s connection timeout
 })
 
+/**
+ * Resend API Fallback
+ * Render blocks SMTP ports 587/465/25 by default.
+ * Transactional email via API (Port 443) is the only reliable way.
+ */
+async function sendViaResend(options) {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) throw new Error('RESEND_API_KEY not configured')
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      from: process.env.SMTP_FROM || `Thee You Space <onboarding@resend.dev>`,
+      to: [options.to],
+      subject: options.subject,
+      html: options.html
+    })
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Resend API error')
+  }
+  return await response.json()
+}
+
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 const BASE = 'font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 2rem; background-color: #FDFBF7; color: #2A2520;'
@@ -262,10 +292,18 @@ async function _send({ to, subject, html, tag, bookingId }) {
     html,
   }
   try {
+    // Priority 1: Resend API (Always works on Render/Cloud)
+    if (process.env.RESEND_API_KEY) {
+      const data = await sendViaResend(mailOptions)
+      console.log(`[Email:${tag}] ✅ Sent via RESEND API to ${to} — id: ${data.id} — booking: ${bookingId}`)
+      return
+    }
+
+    // Priority 2: Nodemailer SMTP
     const info = await transporter.sendMail(mailOptions)
-    console.log(`[Email:${tag}] ✅ Sent to ${to} — messageId: ${info.messageId} — booking: ${bookingId}`)
+    console.log(`[Email:${tag}] ✅ Sent via SMTP to ${to} — messageId: ${info.messageId} — booking: ${bookingId}`)
   } catch (error) {
-    console.error(`[Email:${tag}] ❌ Failed to send to ${to} — booking: ${bookingId}:`, error.message)
+    console.error(`[Email:${tag}] ❌ All delivery methods failed for ${to} — booking: ${bookingId}:`, error.message)
     if (error.code) console.error(`[Email:${tag}] SMTP error code: ${error.code}`)
     // Do NOT throw — email failure must never break the payment confirmation flow
   }
