@@ -8,8 +8,21 @@ import './Confirmation.css'
 function Confirmation() {
   const navigate = useNavigate()
   const location = useLocation()
-  const booking = location.state?.booking
-  const isFirstTimer = location.state?.isFirstTimer ?? false   // passed from DetailsPayment
+
+  // Try to get data from location state first (best for immediate redirect)
+  // If not there (e.g. on refresh), check sessionStorage
+  const [data, setData] = React.useState(() => {
+    const fromState = location.state?.booking
+    if (fromState) {
+      sessionStorage.setItem('last_booking', JSON.stringify(location.state))
+      return location.state
+    }
+    const saved = sessionStorage.getItem('last_booking')
+    return saved ? JSON.parse(saved) : null
+  })
+
+  const booking = data?.booking
+  const isFirstTimer = data?.isFirstTimer ?? false
 
   return (
     <CalmContainer centered>
