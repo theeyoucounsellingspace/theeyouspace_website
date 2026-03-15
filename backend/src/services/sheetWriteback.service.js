@@ -238,9 +238,29 @@ async function removeSlotFromSheet(professional, date, time) {
     }
 }
 
+/**
+ * Restore a cancelled/rescheduled slot back to the 'Slots' tab so others can book it.
+ */
+async function restoreSlotToSheet(professional, date, time) {
+    const sheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
+    if (!sheetId) return { restored: false, reason: 'GOOGLE_SHEET_ID not set' }
 
+    let token
+    try { token = await getAccessToken() } catch { return { restored: false, reason: 'Auth failed' } }
+    if (!token) return { restored: false, reason: 'No token' }
 
-module.exports = { removeSlotFromSheet, appendBookingToSheet, updateBookingStatusInSheet, restoreBookingsFromSheet }
+    try {
+        const payload = [professional || 'General', date, time]
+        await appendRow(sheetId, token, 'Slots', payload)
+        console.log(`[SheetWriteback] ✅ Restored slot to sheet: ${professional} | ${date} | ${time}`)
+        return { restored: true }
+    } catch (err) {
+        console.error('[SheetWriteback] ❌ Failed to restore slot to sheet:', err.message)
+        return { restored: false, reason: err.message }
+    }
+}
+
+module.exports = { removeSlotFromSheet, appendBookingToSheet, updateBookingStatusInSheet, restoreBookingsFromSheet, restoreSlotToSheet }
 
 /**
  * restoreBookingsFromSheet()

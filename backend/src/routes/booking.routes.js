@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const { body, query, validationResult } = require('express-validator')
 const { createPaymentOrder } = require('../services/payment.service')
-const { getAvailableSlots, isSlotAvailable, bookSlot } = require('../services/calendar.service')
+const { getAvailableSlots, isSlotAvailable, bookSlot, releaseSlot } = require('../services/calendar.service')
 const { getPricing } = require('../utils/pricing.service')
 const { bookingLimiter, slotLimiter } = require('../middleware/rateLimiter.middleware')
 const { SESSION_TYPES } = require('../utils/constants')
@@ -10,7 +10,7 @@ const Booking = require('../models/Booking')
 const { isMoreThan24HoursAway } = require('../utils/dateParser')
 const { sendRescheduleConfirmation, sendRescheduleAlert, sendCancellationConfirmation, sendCancellationNoRefund, sendCancellationAlert } = require('../services/email.service')
 const { initiateRefund } = require('../utils/razorpay')
-const { removeSlotFromSheet, appendBookingToSheet, updateBookingStatusInSheet } = require('../services/sheetWriteback.service')
+const { removeSlotFromSheet, appendBookingToSheet, updateBookingStatusInSheet, restoreSlotToSheet } = require('../services/sheetWriteback.service')
 
 /**
  * GET /api/booking/slots
@@ -226,6 +226,9 @@ router.post('/:id/reschedule',
       const newSlot = { date: newSlotDate, time: newSlotTime, professional: pro }
       bookSlot(newSlotDate, newSlotTime, booking.id, pro)
 
+      // Free up the old slot in memory instantly for other patients
+      releaseSlot(oldSlot.date, oldSlot.time, pro)
+
       // Update booking in memory
       Booking.updateById(booking.id, {
         selectedSlot: newSlot,
@@ -244,6 +247,9 @@ router.post('/:id/reschedule',
         ),
         removeSlotFromSheet(pro, newSlotDate, newSlotTime).catch(e =>
           console.error('[Reschedule] New slot sheet removal failed:', e.message)
+        ),
+        restoreSlotToSheet(pro, oldSlot.date, oldSlot.time).catch(e =>
+          console.error('[Reschedule] Old slot sheet restore failed:', e.message)
         ),
       ]).then(results => {
         results.forEach((r, i) => {
@@ -319,6 +325,9 @@ router.post('/:id/cancel',
 
       const cancelled = Booking.findById(booking.id)
 
+      // Free up the slot in memory instantly for other patients
+      releaseSlot(slot.date, slot.time, booking.professional || slot.professional)
+
       // Update sheet + fire emails non-blocking
       Promise.allSettled([
         eligible24hr
@@ -330,6 +339,9 @@ router.post('/:id/cancel',
           slot.date, slot.time,
           refundInitiated ? 'Cancelled+Refunded' : 'Cancelled'
         ).catch(e => console.error('[Cancel] Sheet update failed:', e.message)),
+        restoreSlotToSheet(booking.professional || slot.professional, slot.date, slot.time).catch(e =>
+          console.error('[Cancel] Slot sheet restore failed:', e.message)
+        ),
       ]).then(results => {
         results.forEach((r, i) => {
           if (r.status === 'rejected') console.error(`[Cancel] Side effect ${i} failed:`, r.reason?.message)
