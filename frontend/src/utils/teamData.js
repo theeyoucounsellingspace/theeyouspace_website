@@ -13,6 +13,7 @@ import jeevanPhoto from '../assets/team/jeevan.png'
 import abijithPhoto from '../assets/team/abijith.png'
 import mohammedPhoto from '../assets/team/mohammed.jpg'
 import joanPhoto from '../assets/team/joan.jpg'
+import nivethaPhoto from '../assets/team/nivetha.jpg'
 
 export const TEAM_DATA = [
     {
@@ -66,6 +67,18 @@ export const TEAM_DATA = [
         photo: joanPhoto,
         photoFit: 'cover',
         photoPosition: 'center 20%', // frame face + upper chest, crop busy background
+    },
+    {
+        isFounder: false,
+        name: 'Nivetha Pandian',
+        role: 'Counselling Psychologist',
+        exp: '2+ yrs exp',
+        // Fallback areas/approach if Google Sheet does not provide them
+        areas: ['Counseling', 'Mental Health'],
+        approach: ['Evidence-Based Approaches'],
+        photo: nivethaPhoto,
+        photoFit: 'cover',
+        photoPosition: 'center 25%', // precisely frames her face in the circle, crops surrounding details
     },
 ]
 
