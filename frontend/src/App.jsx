@@ -12,30 +12,33 @@ import About from './pages/About'
 import Reschedule from './pages/Reschedule'
 import PriorityCheckout from './pages/PriorityCheckout'
 import { DataProvider } from './context/DataContext'
+import ErrorBoundary from './components/ErrorBoundary'
 import ScrollToTop from './components/ScrollToTop'
 import { ROUTES } from './utils/constants'
 
 function App() {
   return (
-    <DataProvider>
-      <Router>
-        <ScrollToTop />
-        <Layout>
-          <Routes>
-            <Route path={ROUTES.HOME} element={<Home />} />
-            <Route path={ROUTES.TRIAGE} element={<Triage />} />
-            <Route path={ROUTES.MATCHING} element={<Matching />} />
-            <Route path={ROUTES.SCHEDULE} element={<Schedule />} />
-            <Route path={ROUTES.DETAILS_PAYMENT} element={<DetailsPayment />} />
-            <Route path={ROUTES.CONFIRMATION} element={<Confirmation />} />
-            <Route path={ROUTES.SAFETY} element={<Safety />} />
-            <Route path={ROUTES.ABOUT} element={<About />} />
-            <Route path={ROUTES.RESCHEDULE} element={<Reschedule />} />
-            <Route path="/priority/:token" element={<PriorityCheckout />} />
-          </Routes>
-        </Layout>
-      </Router>
-    </DataProvider>
+    <ErrorBoundary>
+      <DataProvider>
+        <Router>
+          <ScrollToTop />
+          <Layout>
+            <Routes>
+              <Route path={ROUTES.HOME} element={<Home />} />
+              <Route path={ROUTES.TRIAGE} element={<Triage />} />
+              <Route path={ROUTES.MATCHING} element={<Matching />} />
+              <Route path={ROUTES.SCHEDULE} element={<Schedule />} />
+              <Route path={ROUTES.DETAILS_PAYMENT} element={<DetailsPayment />} />
+              <Route path={ROUTES.CONFIRMATION} element={<Confirmation />} />
+              <Route path={ROUTES.SAFETY} element={<Safety />} />
+              <Route path={ROUTES.ABOUT} element={<About />} />
+              <Route path={ROUTES.RESCHEDULE} element={<Reschedule />} />
+              <Route path="/priority/:token" element={<PriorityCheckout />} />
+            </Routes>
+          </Layout>
+        </Router>
+      </DataProvider>
+    </ErrorBoundary>
   )
 }
 

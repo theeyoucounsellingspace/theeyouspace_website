@@ -69,6 +69,23 @@ async function sheetsGet(path, token) {
     })
 }
 
+/**
+ * sheetsGet with simple retry logic for resilience
+ */
+async function sheetsGetWithRetry(path, token, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const data = await sheetsGet(path, token)
+            if (data && data.error) throw new Error(data.error.message || 'Sheets API Error')
+            return data
+        } catch (err) {
+            console.error(`[Slot Sync] Attempt ${i + 1} failed: ${err.message}`)
+            if (i === retries - 1) throw err
+            await new Promise(r => setTimeout(r, 1000 * (i + 1))) // Linear backoff
+        }
+    }
+}
+
 
 // ─── HTTP fetch with redirect support ────────────────────────────────────────
 
@@ -303,7 +320,7 @@ async function syncSlotsFromSheet() {
     // 1. Professionals tab (BIO/PROFILES)
     let professionals = []
     try {
-        const profData = await sheetsGet(
+        const profData = await sheetsGetWithRetry(
             `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Professionals')}`,
             token
         )
@@ -376,7 +393,7 @@ async function syncSlotsFromSheet() {
     // 2. Standard Slots tab
     let standardSlots = []
     try {
-        const slotData = await sheetsGet(
+        const slotData = await sheetsGetWithRetry(
             `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Slots')}`,
             token
         )
@@ -389,7 +406,7 @@ async function syncSlotsFromSheet() {
     // 3. Priority Slots tab
     let prioritySlots = []
     try {
-        const priorityData = await sheetsGet(
+        const priorityData = await sheetsGetWithRetry(
             `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('PrioritySlots')}`,
             token
         )

@@ -55,15 +55,29 @@ function DetailsPayment() {
   const professional = sessionInfo?.professional
   const triageData = sessionInfo?.triageData
 
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    paymentMethod: 'online',
-    isFirstTimer: null,    // null = unanswered, true = never been, false = returning
+  const [formData, setFormData] = useState(() => {
+    const saved = sessionStorage.getItem('dp_form_data')
+    return saved ? JSON.parse(saved) : {
+      name: '',
+      email: '',
+      phone: '',
+      paymentMethod: 'online',
+      isFirstTimer: null,
+    }
   })
 
-  const [consentGiven, setConsentGiven] = useState(false)
+  const [consentGiven, setConsentGiven] = useState(() => {
+    return sessionStorage.getItem('dp_consent') === 'true'
+  })
+
+  // Persist form data on change
+  useEffect(() => {
+    sessionStorage.setItem('dp_form_data', JSON.stringify(formData))
+  }, [formData])
+
+  useEffect(() => {
+    sessionStorage.setItem('dp_consent', consentGiven)
+  }, [consentGiven])
 
   const [pricing, setPricing] = useState(null)
   const [loadingPricing, setLoadingPricing] = useState(true)
@@ -164,7 +178,7 @@ function DetailsPayment() {
           },
           onFailure: async (errorData) => {
             console.error('Payment failed:', errorData)
-            await reportPaymentFailure(order.id)
+            try { await reportPaymentFailure(order.id) } catch (e) { console.warn('Reporting failure failed', e) }
             setError('Payment failed. You can try again.')
             setSubmitting(false)
           },
