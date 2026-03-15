@@ -406,7 +406,7 @@ const BOOKING_HEADERS = [
     'Booking ID', 'Patient Name', 'Email', 'Phone',
     'Date', 'Time', 'Session Type',
     'Primary Concern', 'Duration', 'Affected Areas', 'First Session?',
-    'Booking Source', 'Status', 'Notes', 'Confirmed At',
+    'Booking Source', 'Status', 'Notes', 'Confirmed At', 'Meeting Link',
 ]
 
 /** Column headers for the All Bookings aggregate tab (prepends Professional) */
@@ -551,6 +551,7 @@ async function appendBookingToSheet(booking) {
             'Confirmed',
             '',            // Notes — counsellor fills manually
             now,
+            booking.meetUrl || '', // Meeting Link appended cleanly at the end
         ]
 
         const allBookingsRow = [proName, ...bookingRow]
