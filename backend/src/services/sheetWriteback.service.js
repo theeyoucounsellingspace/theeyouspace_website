@@ -202,11 +202,14 @@ async function removeSlotFromSheet(professional, date, time) {
     // Read the actual sheetId (tab ID) from metadata — don't assume it's 0 or named 'Sheet1'
     const sheetMetaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`
     let gid = 0
-    let tabName = 'Sheet1'
+    let tabName = 'Slots'
     try {
         const meta = await getJson(sheetMetaUrl, token)
-        gid = meta?.sheets?.[0]?.properties?.sheetId ?? 0
-        tabName = meta?.sheets?.[0]?.properties?.title || 'Sheet1'
+        const slotsSheet = (meta?.sheets || []).find(s => s.properties?.title === 'Slots')
+        if (slotsSheet) {
+            gid = slotsSheet.properties.sheetId || 0
+            tabName = slotsSheet.properties.title
+        }
     } catch (_) { /* use default gid=0 */ }
 
     const deleteUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`

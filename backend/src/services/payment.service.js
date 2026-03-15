@@ -114,6 +114,14 @@ async function verifyAndProcessPayment(paymentData) {
   console.log(`[Payment Verification] Fetching payment details from Razorpay for: ${paymentId}`)
   const razorpayPayment = await getPaymentDetails(paymentId)
 
+  // RACE CONDITION GUARD: Re-verify idempotency after the async 'await' yields the event loop.
+  // If the Webhook and Frontend verification hit simultaneously, one might have finished while this one was waiting.
+  const freshBooking = Booking.findByRazorpayOrderId(orderId)
+  if (freshBooking.paymentStatus === PAYMENT_STATUS.SUCCESS) {
+    console.log(`[Payment Verification] Booking ${booking.id} was processed by another thread. Yielding.`)
+    return freshBooking.toJSON()
+  }
+
   // Verify payment status
   if (razorpayPayment.status !== 'captured' && razorpayPayment.status !== 'authorized') {
     console.error(`[Payment Verification] Payment not successful. Status: ${razorpayPayment.status}, Booking: ${booking.id}`)

@@ -22,12 +22,12 @@ async function sendViaResend(options) {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) throw new Error('RESEND_API_KEY not configured')
 
-  const fromRaw = process.env.SMTP_FROM || `Thee You Space <onboarding@resend.dev>`
-  // Resend requires domain verification for custom 'From' addresses. 
-  // If user hasn't verified a domain and is trying to send FROM a gmail/outlook account, it will fail.
-  // Fallback to the onboarding@resend.dev address for unverified senders.
-  const from = (fromRaw.toLowerCase().includes('gmail.com') || fromRaw.toLowerCase().includes('outlook.com'))
-    ? `Thee You Space <onboarding@resend.dev>`
+  const fromRaw = process.env.SMTP_FROM || `Thee You Space <bookings@theeyouspace.com>`
+  
+  // If the user hasn't correctly overridden SMTP_FROM and it's still gmail, 
+  // force it to use the new verified domain so Resend doesn't block patient emails
+  const from = (fromRaw.toLowerCase().includes('gmail.com') || fromRaw.toLowerCase().includes('outlook.com') || fromRaw.includes('onboarding@resend.dev'))
+    ? `Thee You Space <bookings@theeyouspace.com>`
     : fromRaw
 
   const response = await fetch('https://api.resend.com/emails', {
