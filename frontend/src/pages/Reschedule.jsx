@@ -21,21 +21,20 @@ function Reschedule() {
     const [serverError, setServerError] = useState('')
     const [cancelResult, setCancelResult] = useState(null)  // { refundInitiated, refundId, message }
 
-    // If no bid in URL, show error immediately
-    useEffect(() => {
-        if (!bid) setStep(STEPS.ERROR)
-    }, [bid])
+    const [manualBid, setManualBid] = useState('')
 
     // ── Step 1: Verify email ──────────────────────────────────────────────────
 
     const handleVerify = async (e) => {
         e.preventDefault()
+        const activeBid = bid || manualBid.trim()
+        if (!activeBid) { setEmailErr('Please enter your Booking ID'); return }
         if (!email.trim()) { setEmailErr('Please enter your email'); return }
         setEmailErr('')
         setLoading(true)
         try {
             const res = await fetch(
-                `${API_BASE_URL}/booking/${encodeURIComponent(bid)}/reschedule-check?email=${encodeURIComponent(email.trim())}`,
+                `${API_BASE_URL}/booking/${encodeURIComponent(activeBid)}/reschedule-check?email=${encodeURIComponent(email.trim())}`,
                 { method: 'GET', headers: { 'Content-Type': 'application/json' } }
             )
             const data = await res.json()
@@ -67,8 +66,9 @@ function Reschedule() {
         if (!chosen) return
         setLoading(true)
         setSubmitErr('')
+        const activeBid = bid || manualBid.trim()
         try {
-            const res = await fetch(`${API_BASE_URL}/booking/${encodeURIComponent(bid)}/reschedule`, {
+            const res = await fetch(`${API_BASE_URL}/booking/${encodeURIComponent(activeBid)}/reschedule`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email.trim(), newSlotDate: chosen.date, newSlotTime: chosen.time }),
@@ -92,8 +92,9 @@ function Reschedule() {
     const handleCancel = async () => {
         setLoading(true)
         setSubmitErr('')
+        const activeBid = bid || manualBid.trim()
         try {
-            const res = await fetch(`${API_BASE_URL}/booking/${encodeURIComponent(bid)}/cancel`, {
+            const res = await fetch(`${API_BASE_URL}/booking/${encodeURIComponent(activeBid)}/cancel`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email.trim() }),
@@ -128,14 +129,26 @@ function Reschedule() {
     if (step === STEPS.EMAIL) return (
         <CalmContainer>
             <div className="rs-wrap">
-                <p className="rs-eyebrow">{isCancelFlow ? 'Cancel booking' : 'Reschedule'}</p>
-                <h1 className="rs-title">{isCancelFlow ? 'Cancel your session' : 'Let\'s move your session'}</h1>
-                <p className="rs-body">Enter the email address you used when booking to continue.</p>
+                <p className="rs-eyebrow">{isCancelFlow ? 'Cancel booking' : 'Manage Booking'}</p>
+                <h1 className="rs-title">{isCancelFlow ? 'Cancel your session' : 'Manage your session'}</h1>
+                <p className="rs-body">Enter the {bid ? '' : 'Booking ID and '}email address you used when booking to continue.</p>
                 <form className="rs-form" onSubmit={handleVerify} noValidate>
+                    {!bid && (
+                        <input
+                            id="rs-bid"
+                            type="text"
+                            className={`rs-input ${emailError && emailError.includes('ID') ? 'rs-input--err' : ''}`}
+                            placeholder="Booking ID (e.g. TYS-1234)"
+                            value={manualBid}
+                            onChange={e => setManualBid(e.target.value)}
+                            disabled={loading}
+                            style={{ marginBottom: '1rem' }}
+                        />
+                    )}
                     <input
                         id="rs-email"
                         type="email"
-                        className={`rs-input ${emailError ? 'rs-input--err' : ''}`}
+                        className={`rs-input ${(emailError && !emailError.includes('ID')) ? 'rs-input--err' : ''}`}
                         placeholder="Your email address"
                         value={email}
                         onChange={e => setEmail(e.target.value)}

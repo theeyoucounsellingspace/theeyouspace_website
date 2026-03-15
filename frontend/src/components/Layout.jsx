@@ -45,6 +45,8 @@ function Layout({ children }) {
             <span className="footer-divider" aria-hidden="true">·</span>
             <Link to={ROUTES.SAFETY} className="footer-link">Safety &amp; Terms</Link>
             <span className="footer-divider" aria-hidden="true">·</span>
+            <Link to="/reschedule" className="footer-link">Manage Booking</Link>
+            <span className="footer-divider" aria-hidden="true">·</span>
             <a href={`mailto:${EMAIL}`} className="footer-link">{EMAIL}</a>
           </div>
 
