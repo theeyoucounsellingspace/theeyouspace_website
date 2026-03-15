@@ -323,7 +323,7 @@ async function restoreBookingsFromSheet() {
         let restored = 0
         let skipped = 0
 
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = rows.length - 1; i >= 1; i--) {
             const row = rows[i]
             const bookingId = (row[C.bookingId] || '').trim()
 

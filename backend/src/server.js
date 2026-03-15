@@ -2,8 +2,8 @@ require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const helmet = require('helmet')
-const mongoSanitize = require('express-mongo-sanitize')
-const xss = require('xss-clean')
+// Initial security and performance packages removed for minimal disruption strategy
+
 
 // Import routes
 const bookingRoutes = require('./routes/booking.routes')
@@ -96,12 +96,6 @@ app.use(express.json({
   }
 }))
 app.use(express.urlencoded({ extended: true, limit: '10kb' }))
-
-// 4. Data Sanitization against NoSQL injection
-app.use(mongoSanitize())
-
-// 5. Data Sanitization against XSS
-app.use(xss())
 
 // 6. Global Rate Limiting
 app.use(apiLimiter)

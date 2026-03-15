@@ -151,8 +151,14 @@ router.get('/:id/reschedule-check', async (req, res) => {
     }
 
     // Must be a confirmed, paid booking
-    if (booking.paymentStatus !== 'success' || booking.bookingStatus !== 'confirmed') {
-      return res.status(400).json({ success: false, eligible: false, reason: 'Booking is not in a reschedulable state' })
+    // Must be a confirmed or already rescheduled, paid booking
+    const allowedStatuses = ['confirmed', 'rescheduled']
+    if (booking.paymentStatus !== 'success' || !allowedStatuses.includes(booking.bookingStatus)) {
+      return res.status(400).json({ 
+        success: false, 
+        eligible: false, 
+        error: `Booking is not in a reschedulable state (Current: ${booking.bookingStatus})` 
+      })
     }
 
     // 24hr window check
@@ -296,9 +302,13 @@ router.post('/:id/cancel',
         return res.status(403).json({ success: false, error: 'Email does not match this booking' })
       }
 
-      // Must be confirmed + paid
-      if (booking.paymentStatus !== 'success' || booking.bookingStatus !== 'confirmed') {
-        return res.status(400).json({ success: false, error: 'This booking cannot be cancelled in its current state' })
+      // Must be confirmed/rescheduled + paid
+      const allowedStatuses = ['confirmed', 'rescheduled']
+      if (booking.paymentStatus !== 'success' || !allowedStatuses.includes(booking.bookingStatus)) {
+        return res.status(400).json({ 
+          success: false, 
+          error: `Booking cannot be cancelled (Current: ${booking.bookingStatus})` 
+        })
       }
 
       const slot = booking.selectedSlot || {}
