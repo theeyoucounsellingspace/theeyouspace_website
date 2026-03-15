@@ -5,6 +5,8 @@ import CalmContainer from '../components/CalmContainer'
 import { APP_NAME, APP_TAGLINE, ROUTES } from '../utils/constants'
 import './Home.css'
 
+const WA_LINK = `${import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/917358154022'}?text=${encodeURIComponent('Hi, I need to book a priority session urgently.')}`
+
 function Home() {
   const navigate = useNavigate()
 
@@ -24,12 +26,15 @@ function Home() {
             >
               Book a session
             </Button>
-            <Button
-              variant="secondary"
-              onClick={() => navigate(ROUTES.TRIAGE, { state: { urgency: 'priority' } })}
+            <a
+              href={WA_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              style={{ textDecoration: 'none', textAlign: 'center' }}
             >
               Book a session "now"
-            </Button>
+            </a>
           </div>
 
           <div className="home-footer">

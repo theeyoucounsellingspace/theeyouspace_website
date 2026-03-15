@@ -10,7 +10,17 @@ const WA_LINK = `${import.meta.env.VITE_WHATSAPP_LINK || 'https://wa.me/91735815
 function Schedule() {
   const navigate = useNavigate()
   const location = useLocation()
-  const triageData = location.state?.triageData
+
+  // Persist triageData in sessionStorage so refresh doesn't lose context
+  const [triageData] = useState(() => {
+    const fromState = location.state?.triageData
+    if (fromState) {
+      sessionStorage.setItem('last_triage', JSON.stringify(fromState))
+      return fromState
+    }
+    const saved = sessionStorage.getItem('last_triage')
+    return saved ? JSON.parse(saved) : null
+  })
 
   const [grouped, setGrouped] = useState({})
   const [apiProfMap, setApiProfMap] = useState({})

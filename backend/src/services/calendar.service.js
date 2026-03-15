@@ -19,8 +19,15 @@ function getAvailableSlots() {
 function isSlotAvailable(date, time, professional) {
   const slot = professional
     ? AvailabilitySlot.findByProfessionalDateTime(professional, date, time)
-    : AvailabilitySlot.findByDateTime(date, time) // fallback: hope there's no clash
-  return !!(slot && slot.available)
+    : AvailabilitySlot.findByDateTime(date, time)
+  
+  if (!slot || !slot.available) return false
+
+  // Check if locked (payment in progress)
+  const now = Date.now()
+  if (slot.pendingUntil && slot.pendingUntil > now) return false
+
+  return true
 }
 
 /**

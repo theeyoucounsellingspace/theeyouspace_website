@@ -7,13 +7,26 @@ const { sendBookingConfirmation, sendSessionPrepEmail } = require('./email.servi
 const { removeSlotFromSheet, appendBookingToSheet } = require('./sheetWriteback.service')
 const { createMeetEvent, generateMeetUrl } = require('./calendarMeet.service')
 
+const { CONCERN_LABELS, DURATION_LABELS, IMPACT_LABELS } = require('../utils/triageLabels')
+
 /**
  * Create a payment order for booking
- * @param {Object} bookingData - { sessionType, name, email, phone, selectedSlot, paymentMethod }
+ * @param {Object} bookingData - { sessionType, name, email, phone, selectedSlot, paymentMethod, triageData }
  * @returns {Promise<Object>} { booking, order }
  */
 async function createPaymentOrder(bookingData) {
-  const { sessionType, selectedSlot } = bookingData
+  const { sessionType, selectedSlot, triageData = {} } = bookingData
+
+  // 1. STYRIC SANITIZATION: Validate triage data against allowed labels
+  // This prevents rogue API calls from injecting garbage into the sheets/emails
+  const sanitizedTriage = {
+    concern: CONCERN_LABELS[triageData.concern] ? triageData.concern : 'general',
+    duration: DURATION_LABELS[triageData.duration] ? triageData.duration : 'longer',
+    impacts: Array.isArray(triageData.impacts) 
+      ? triageData.impacts.filter(id => IMPACT_LABELS[id])
+      : [],
+    isFirstTimer: triageData.isFirstTimer === true,
+  }
 
   console.log(`[Order Creation] Creating order for ${sessionType} session, user: ${bookingData.email}`)
 
@@ -31,6 +44,7 @@ async function createPaymentOrder(bookingData) {
   // Create booking record
   const booking = Booking.create({
     ...bookingData,
+    triageData: sanitizedTriage, // Override with sanitized version
     pricing: {
       displayAmount: pricing.displayAmount,
       totalAmount: pricing.totalAmount,

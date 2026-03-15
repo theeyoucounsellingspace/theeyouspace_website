@@ -49,6 +49,18 @@ function Triage() {
   // Whether the user has clicked "Can't even wait?" — reveals WA button
   const [showWaGate, setShowWaGate] = useState(false)
 
+  // ── Safety: Warning on refresh if data is present ──
+  React.useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (concern || duration || impacts.length > 0) {
+        e.preventDefault()
+        e.returnValue = '' // standard for showing the default browser prompt
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [concern, duration, impacts])
+
   const goBack = () => {
     if (step === 1) navigate(ROUTES.HOME)
     else { setStep(s => s - 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }
@@ -63,6 +75,11 @@ function Triage() {
     setImpacts(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id])
 
   const handleUrgency = (sessionType) => {
+    if (sessionType === 'priority') {
+      window.open(WA_LINK, '_blank', 'noopener,noreferrer')
+      return
+    }
+
     const triageData = {
       concern,
       duration,
@@ -70,8 +87,6 @@ function Triage() {
       urgencyLevel: sessionType,
       sessionType,
     }
-    // Go straight to Schedule — all professionals shown by availability.
-    // triageData travels with the booking so the counsellor is prepared.
     navigate(ROUTES.SCHEDULE, { state: { triageData } })
   }
 
@@ -175,19 +190,16 @@ function Triage() {
 
             {/* Option 2 — Priority */}
             <button
-              className={`triage-option urgency-option urgency-option--priority ${initialUrgency === 'priority' ? 'recommended' : ''}`}
+              className="triage-option urgency-option urgency-option--priority"
               onClick={() => handleUrgency('priority')}
             >
               <div className="urgency-header">
                 <span className="opt-label">I need to speak with someone sooner</span>
-                <span className="urgency-badge urgency-badge--priority">Higher rate · Faster</span>
+                <span className="urgency-badge urgency-badge--priority">Connect on WhatsApp</span>
               </div>
               <span className="opt-desc">
-                {initialUrgency === 'priority'
-                  ? "As you requested, we'll move you to the front of the queue and reach out quickly to confirm your slot."
-                  : "Move up the queue. We'll reach out quickly to confirm your slot."}
+                If our website schedule is full or doesn't fit your needs, talk to us directly. We'll find a way to fit you in as a priority.
               </span>
-              {initialUrgency === 'priority' && <span className="recommended-tag">Requested by you</span>}
             </button>
 
             {/* WhatsApp gate — repositioned as "Help/Emergency" instead of "Bypass" */}

@@ -9,6 +9,8 @@ let lastUploadedBy = null
 let lastUploadedAt = null
 let _slotCounter = 0 // monotonic counter — avoids Date.now() collisions when slots load fast
 
+const norm = (s) => (s || '').trim().toLowerCase()
+
 class AvailabilitySlot {
 
   static getAll() {
@@ -30,13 +32,10 @@ class AvailabilitySlot {
    * when a professional is known.
    */
   static findByProfessionalDateTime(professional, date, time) {
-    const now = Date.now()
     return slots.find(
-      (s) => s.professional === professional &&
-        s.date === date &&
-        s.time === time &&
-        s.available &&
-        (!s.pendingUntil || s.pendingUntil < now)
+      (s) => norm(s.professional) === norm(professional) &&
+        norm(s.date) === norm(date) &&
+        norm(s.time) === norm(time)
     )
   }
 
@@ -45,7 +44,7 @@ class AvailabilitySlot {
    * Prefer findByProfessionalDateTime when professional is available.
    */
   static findByDateTime(date, time) {
-    return slots.find((s) => s.date === date && s.time === time)
+    return slots.find((s) => norm(s.date) === norm(date) && norm(s.time) === norm(time))
   }
 
   static bookSlot(id, bookingId) {

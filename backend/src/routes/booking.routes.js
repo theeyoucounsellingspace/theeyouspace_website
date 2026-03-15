@@ -99,6 +99,11 @@ router.post(
     body('phone').optional().trim(),
     body('selectedSlot.date').notEmpty().withMessage('Date is required'),
     body('selectedSlot.time').notEmpty().withMessage('Time is required'),
+    body('selectedSlot.professional').optional().isString(),
+    body('triageData.concern').optional().isString(),
+    body('triageData.duration').optional().isString(),
+    body('triageData.impacts').optional().isArray(),
+    body('triageData.isFirstTimer').optional().isBoolean(),
     body('paymentMethod').optional().isString(),
   ],
   async (req, res) => {
