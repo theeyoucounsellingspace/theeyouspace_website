@@ -146,7 +146,7 @@ router.get('/:id/reschedule-check', async (req, res) => {
     }
 
     // Must be a confirmed, paid booking
-    if (booking.paymentStatus !== 'paid' || booking.bookingStatus !== 'confirmed') {
+    if (booking.paymentStatus !== 'success' || booking.bookingStatus !== 'confirmed') {
       return res.status(400).json({ success: false, eligible: false, reason: 'Booking is not in a reschedulable state' })
     }
 
@@ -286,7 +286,7 @@ router.post('/:id/cancel',
       }
 
       // Must be confirmed + paid
-      if (booking.paymentStatus !== 'paid' || booking.bookingStatus !== 'confirmed') {
+      if (booking.paymentStatus !== 'success' || booking.bookingStatus !== 'confirmed') {
         return res.status(400).json({ success: false, error: 'This booking cannot be cancelled in its current state' })
       }
 
