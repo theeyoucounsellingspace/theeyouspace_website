@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ROUTES } from '../utils/constants'
-import { fetchSlots, fetchProfessionals } from '../utils/api'
+import { useData } from '../context/DataContext'
 import { getTeamMember } from '../utils/teamData'
 import './Schedule.css'
 
@@ -22,50 +22,38 @@ function Schedule() {
     return saved ? JSON.parse(saved) : null
   })
 
+  const { professionals, slots: slotData, loading: dataLoading, error: dataError, refreshData } = useData()
+
   const [grouped, setGrouped] = useState({})
   const [apiProfMap, setApiProfMap] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState({})
   const [nudgeDismissed, setNudgeDismissed] = useState(false)
 
-  useEffect(() => { loadData() }, [])
-
-  const loadData = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [slotResult, profResult] = await Promise.allSettled([
-        fetchSlots(),
-        fetchProfessionals(),
-      ])
-
-      if (slotResult.status === 'rejected') throw new Error(slotResult.reason?.message || 'Failed to load slots')
-      const data = slotResult.value
-      if (data.grouped && Object.keys(data.grouped).length > 0) {
-        setGrouped(data.grouped)
-      } else if (data.slots) {
-        const manual = {}
-        data.slots.forEach(slot => {
-          const pro = slot.professional || 'Available Slots'
-          if (!manual[pro]) manual[pro] = []
-          manual[pro].push(slot)
-        })
-        setGrouped(manual)
-      }
-
-      if (profResult.status === 'fulfilled' && Array.isArray(profResult.value)) {
-        const map = {}
-        profResult.value.forEach(p => { if (p.name) map[p.name.toLowerCase()] = p })
-        setApiProfMap(map)
-      }
-    } catch (err) {
-      console.error('Error loading schedule data:', err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
+  // Process context data when it arrives
+  useEffect(() => {
+    if (slotData.grouped && Object.keys(slotData.grouped).length > 0) {
+      setGrouped(slotData.grouped)
+    } else if (slotData.slots) {
+      const manual = {}
+      slotData.slots.forEach(slot => {
+        const pro = slot.professional || 'Available Slots'
+        if (!manual[pro]) manual[pro] = []
+        manual[pro].push(slot)
+      })
+      setGrouped(manual)
     }
-  }
+
+    if (Array.isArray(professionals)) {
+      const map = {}
+      professionals.forEach(p => { if (p.name) map[p.name.toLowerCase()] = p })
+      setApiProfMap(map)
+    }
+  }, [slotData, professionals])
+
+  // Silently refresh data in background every time we hit this page
+  useEffect(() => {
+    refreshData()
+  }, [])
 
   /**
    * Photo priority: sheet URL → bundled photo (founders) → null (initials)
@@ -107,21 +95,21 @@ function Schedule() {
         <p className="schedule-subtitle">Choose a counsellor whose availability works for you.</p>
       </div>
 
-      {loading && (
+      {dataLoading && Object.keys(grouped).length === 0 && (
         <div className="schedule-state">
           <div className="sched-spinner" />
           <p>Finding available professionals…</p>
         </div>
       )}
 
-      {error && (
+      {dataError && Object.keys(grouped).length === 0 && (
         <div className="schedule-state">
-          <p className="schedule-error-msg">{error}</p>
-          <button className="sched-retry-btn" onClick={loadData}>Try again</button>
+          <p className="schedule-error-msg">{dataError}</p>
+          <button className="sched-retry-btn" onClick={refreshData}>Try again</button>
         </div>
       )}
 
-      {!loading && !error && totalSlots === 0 && (
+      {!dataLoading && Object.keys(grouped).length === 0 && !dataError && (
         <div className="schedule-state">
           <p>No available slots at the moment. Please check back soon.</p>
         </div>

@@ -167,8 +167,8 @@ async function startServer() {
   app.listen(PORT, () => {
     console.log(`[Startup] ✅ Server listening on port ${PORT} (${process.env.NODE_ENV || 'development'})`)
 
-    // Auto-resync every 10 min (keep slots fresh without hammering the API)
-    const SYNC_INTERVAL_MIN = 10
+    // Auto-resync every 5 min (keep slots fresh without hammering the API)
+    const SYNC_INTERVAL_MIN = 5
     const syncTimer = setInterval(() => {
       syncSlotsFromSheet().catch(err =>
         console.error('[AutoSync] Periodic sync failed:', err.message)
