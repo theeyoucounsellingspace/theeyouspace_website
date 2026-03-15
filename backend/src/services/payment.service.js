@@ -5,7 +5,7 @@ const Booking = require('../models/Booking')
 const { bookSlot, releaseSlot, lockSlot } = require('./calendar.service')
 const { sendBookingConfirmation, sendSessionPrepEmail } = require('./email.service')
 const { removeSlotFromSheet, appendBookingToSheet } = require('./sheetWriteback.service')
-const { createMeetEvent } = require('./calendarMeet.service')
+const { createMeetEvent, generateMeetUrl } = require('./calendarMeet.service')
 
 /**
  * Create a payment order for booking
