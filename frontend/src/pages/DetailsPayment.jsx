@@ -35,15 +35,31 @@ This agreement is governed by Indian law. Disputes should be addressed first wit
 function DetailsPayment() {
   const navigate = useNavigate()
   const location = useLocation()
-  const selectedSlot = location.state?.selectedSlot
-  const professional = location.state?.professional
-  const triageData = location.state?.triageData
+
+  // Persist selection and triage in sessionStorage to survive refresh
+  const [sessionInfo] = useState(() => {
+    const fromState = {
+      selectedSlot: location.state?.selectedSlot,
+      professional: location.state?.professional,
+      triageData: location.state?.triageData
+    }
+    if (fromState.selectedSlot) {
+      sessionStorage.setItem('current_booking_context', JSON.stringify(fromState))
+      return fromState
+    }
+    const saved = sessionStorage.getItem('current_booking_context')
+    return saved ? JSON.parse(saved) : null
+  })
+
+  const selectedSlot = sessionInfo?.selectedSlot
+  const professional = sessionInfo?.professional
+  const triageData = sessionInfo?.triageData
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    paymentMethod: 'card',
+    paymentMethod: 'online',
     isFirstTimer: null,    // null = unanswered, true = never been, false = returning
   })
 
@@ -58,6 +74,19 @@ function DetailsPayment() {
   useEffect(() => {
     if (!selectedSlot) navigate(ROUTES.SCHEDULE)
   }, [selectedSlot, navigate])
+
+  // ── Safety: Warning on refresh if data is present ──
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      const hasData = formData.name.trim() || formData.email.trim() || formData.phone.trim()
+      if (hasData && !submitting) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [formData, submitting])
 
   useEffect(() => { loadPricing() }, [])
 
@@ -230,29 +259,6 @@ function DetailsPayment() {
                   >
                     No — this is my first time
                   </button>
-                </div>
-              </div>
-
-              {/* Payment method */}
-              <div className="form-group">
-                <label className="form-label">Payment method</label>
-                <div className="payment-options">
-                  <label className="payment-option">
-                    <input type="radio" name="paymentMethod" value="card"
-                      checked={formData.paymentMethod === 'card'} onChange={handleInputChange} disabled={submitting} />
-                    <div className="payment-option-content">
-                      <span className="payment-option-title">Debit / Credit Card</span>
-                      <span className="payment-option-subtitle">Visa, Mastercard, RuPay</span>
-                    </div>
-                  </label>
-                  <label className="payment-option">
-                    <input type="radio" name="paymentMethod" value="upi"
-                      checked={formData.paymentMethod === 'upi'} onChange={handleInputChange} disabled={submitting} />
-                    <div className="payment-option-content">
-                      <span className="payment-option-title">UPI</span>
-                      <span className="payment-option-subtitle">PhonePe, Google Pay, Paytm</span>
-                    </div>
-                  </label>
                 </div>
               </div>
             </div>

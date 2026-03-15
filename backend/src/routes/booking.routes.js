@@ -99,7 +99,7 @@ router.post(
     body('phone').optional().trim(),
     body('selectedSlot.date').notEmpty().withMessage('Date is required'),
     body('selectedSlot.time').notEmpty().withMessage('Time is required'),
-    body('paymentMethod').isIn(['card', 'upi']).withMessage('Invalid payment method'),
+    body('paymentMethod').optional().isString(),
   ],
   async (req, res) => {
     try {
