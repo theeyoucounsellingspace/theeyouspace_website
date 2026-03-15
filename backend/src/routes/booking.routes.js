@@ -250,10 +250,10 @@ router.post('/:id/reschedule',
         updateBookingStatusInSheet(booking.id, pro, oldSlot.date, oldSlot.time, 'Rescheduled').catch(e =>
           console.error('[Reschedule] Sheet status update failed:', e.message)
         ),
-        removeSlotFromSheet(pro, newSlotDate, newSlotTime).catch(e =>
+        removeSlotFromSheet(pro, newSlotDate, newSlotTime, booking.sessionType).catch(e =>
           console.error('[Reschedule] New slot sheet removal failed:', e.message)
         ),
-        restoreSlotToSheet(pro, oldSlot.date, oldSlot.time).catch(e =>
+        restoreSlotToSheet(pro, oldSlot.date, oldSlot.time, booking.sessionType).catch(e =>
           console.error('[Reschedule] Old slot sheet restore failed:', e.message)
         ),
       ]).then(results => {
@@ -344,7 +344,7 @@ router.post('/:id/cancel',
           slot.date, slot.time,
           refundInitiated ? 'Cancelled+Refunded' : 'Cancelled'
         ).catch(e => console.error('[Cancel] Sheet update failed:', e.message)),
-        restoreSlotToSheet(booking.professional || slot.professional, slot.date, slot.time).catch(e =>
+        restoreSlotToSheet(booking.professional || slot.professional, slot.date, slot.time, booking.sessionType).catch(e =>
           console.error('[Cancel] Slot sheet restore failed:', e.message)
         ),
       ]).then(results => {

@@ -171,7 +171,8 @@ async function verifyAndProcessPayment(paymentData) {
     removeSlotFromSheet(
       booking.selectedSlot.professional || booking.professional,
       booking.selectedSlot.date,
-      booking.selectedSlot.time
+      booking.selectedSlot.time,
+      booking.sessionType
     ).then(result => {
       if (result.removed) {
         console.log(`[SheetWriteback] Slot removed from sheet for booking ${booking.id}`)

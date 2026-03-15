@@ -9,13 +9,23 @@ let lastUploadedBy = null
 let lastUploadedAt = null
 let _slotCounter = 0 // monotonic counter — avoids Date.now() collisions when slots load fast
 
+const crypto = require('crypto')
 const norm = (s) => (s || '').trim().toLowerCase()
+
+// Secret for signing priority slots — derived from service account key if not set
+const SLOT_SECRET = process.env.GOOGLE_SERVICE_ACCOUNT_KEY || 'theeyou-priority-secret'
 
 class AvailabilitySlot {
 
   static getAll() {
     const now = Date.now()
-    return slots.filter((s) => s.available && (!s.pendingUntil || s.pendingUntil < now))
+    // Normal users ONLY see non-priority slots
+    return slots.filter((s) => !s.isPriority && s.available && (!s.pendingUntil || s.pendingUntil < now))
+  }
+
+  static getPrioritySlots() {
+    const now = Date.now()
+    return slots.filter((s) => s.isPriority && s.available && (!s.pendingUntil || s.pendingUntil < now))
   }
 
   static getAllIncludingBooked() {
@@ -45,6 +55,11 @@ class AvailabilitySlot {
    */
   static findByDateTime(date, time) {
     return slots.find((s) => norm(s.date) === norm(date) && norm(s.time) === norm(time))
+  }
+
+  static findByToken(token) {
+    if (!token) return null
+    return slots.find(s => s.token === token)
   }
 
   static bookSlot(id, bookingId) {
@@ -80,34 +95,61 @@ class AvailabilitySlot {
   }
 
   /**
-   * Load slots from Google Sheets sync or CSV upload.
+   * Load slots from Google Sheets sync.
    * Preserves already-booked slots across re-uploads.
-   * @param {Array<{professional, date, time}>} parsedSlots
+   * @param {Array<{professional, date, time, isPriority}>} parsedSlots
    * @param {string} uploadedBy
    */
   static loadFromUpload(parsedSlots, uploadedBy = 'admin') {
-    // Keep track of what's already booked so we don't double-book after re-sync
-    const bookedKeys = new Set(
-      slots.filter((s) => !s.available).map((s) => `${s.professional}|${s.date}|${s.time}`)
+    // 1. Separate priority and standard
+    const priorityRequested = parsedSlots.filter(s => s.isPriority)
+    const standardRequested = parsedSlots.filter(s => !s.isPriority)
+
+    // 2. Conflict Resolution: Priority slots "shadow" standard slots at same time
+    const priorityKeys = new Set(
+      priorityRequested.map(s => `${norm(s.professional)}|${norm(s.date)}|${norm(s.time)}`)
     )
 
-    slots = parsedSlots.map((s) => {
-      const key = `${s.professional || 'General'}|${s.date}|${s.time}`
+    // Filter out standard slots if a priority one exists for that specific pro/time
+    const finalStandard = standardRequested.filter(s => {
+      const key = `${norm(s.professional)}|${norm(s.date)}|${norm(s.time)}`
+      return !priorityKeys.has(key)
+    })
+
+    const allRequested = [...priorityRequested, ...finalStandard]
+
+    // 3. Keep track of what's already booked so we don't double-book after re-sync
+    const bookedKeys = new Set(
+      slots.filter((s) => !s.available).map((s) => `${norm(s.professional)}|${norm(s.date)}|${norm(s.time)}`)
+    )
+
+    slots = allRequested.map((s) => {
+      const key = `${norm(s.professional || 'General')}|${norm(s.date)}|${norm(s.time)}`
       const wasBooked = bookedKeys.has(key)
-      return {
-        id: `slot-${++_slotCounter}`, // monotonic counter — no collisions
+      
+      const slotObj = {
+        id: `slot-${++_slotCounter}`,
         professional: s.professional || 'General',
         date: s.date,
         time: s.time,
         available: !wasBooked,
         bookedBy: wasBooked ? 'preserved' : null,
         bookedAt: null,
+        isPriority: !!s.isPriority
       }
+
+      // Generate secure token for priority slots
+      if (slotObj.isPriority) {
+        const raw = `${slotObj.professional}-${slotObj.date}-${slotObj.time}-${SLOT_SECRET}`
+        slotObj.token = crypto.createHash('sha256').update(raw).digest('hex').slice(0, 16)
+      }
+
+      return slotObj
     })
 
     lastUploadedBy = uploadedBy
     lastUploadedAt = new Date().toISOString()
-    console.log(`[Slots] Loaded ${slots.length} slots from ${uploadedBy}`)
+    console.log(`[Slots] Loaded ${slots.length} total slots (${priorityRequested.length} priority) from ${uploadedBy}`)
 
     return slots.length
   }

@@ -297,10 +297,10 @@ async function syncSlotsFromSheet() {
         return { count: 0, errors: ['No token returned'], warnings: [] }
     }
 
-    console.log('[Slot Sync] Authenticated ✅ — reading Professionals + Slots tabs...')
+    console.log('[Slot Sync] Authenticated ✅ — reading Professionals + Slots + PrioritySlots tabs...')
     const errors = [], warnings = []
 
-    // 1. Professionals tab
+    // 1. Professionals tab (BIO/PROFILES)
     let professionals = []
     try {
         const profData = await sheetsGet(
@@ -340,50 +340,74 @@ async function syncSlotsFromSheet() {
         warnings.push(`Could not read Professionals tab: ${err.message}`)
     }
 
-    // 2. Slots tab
-    let slots = []
+    // A helper to parse slot-style tabs (Professional, Date, Time)
+    const parseSlotRows = (rows, tabName, isPriority = false) => {
+        const found = []
+        if (!rows || rows.length < 2) return found
+        
+        const header = rows[0].map(h => (h || '').toLowerCase().trim())
+        const proCol = header.findIndex(h => h.includes('professional') || h.includes('counsellor'))
+        const dateCol = header.findIndex(h => h.includes('date'))
+        const timeCol = header.findIndex(h => h.includes('time'))
+
+        if (dateCol === -1 || timeCol === -1) {
+            errors.push(`${tabName} tab missing Date or Time column`)
+            return found
+        }
+
+        for (let i = 1; i < rows.length; i++) {
+            const r = rows[i]
+            const pro = proCol !== -1 ? (r[proCol] || '').trim() : 'General'
+            const date = (r[dateCol] || '').trim()
+            const time = (r[timeCol] || '').trim()
+
+            if (!date || !time) continue
+            if (date.toLowerCase().includes('e.g') || time.toLowerCase().includes('e.g')) continue
+            if (date.toLowerCase().includes('dd/mm') || time.toLowerCase().includes('hh:mm')) continue
+            
+            const INVALID = ['na', 'n/a', '-', 'none', 'tbd', '']
+            if (INVALID.includes(pro.toLowerCase()) || INVALID.includes(date.toLowerCase())) continue
+
+            found.push({ professional: pro, date, time, isPriority })
+        }
+        return found
+    }
+
+    // 2. Standard Slots tab
+    let standardSlots = []
     try {
         const slotData = await sheetsGet(
             `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Slots')}`,
             token
         )
-        const slotRows = slotData.values || []
-        if (slotRows.length >= 2) {
-            const header = slotRows[0].map(h => (h || '').toLowerCase().trim())
-            const proCol = header.findIndex(h => h.includes('professional') || h.includes('counsellor'))
-            const dateCol = header.findIndex(h => h.includes('date'))
-            const timeCol = header.findIndex(h => h.includes('time'))
-            if (dateCol === -1 || timeCol === -1) {
-                errors.push('Slots tab missing Date or Time column')
-            } else {
-                for (let i = 1; i < slotRows.length; i++) {
-                    const r = slotRows[i]
-                    const pro = proCol !== -1 ? (r[proCol] || '').trim() : 'General'
-                    const date = (r[dateCol] || '').trim()
-                    const time = (r[timeCol] || '').trim()
-                    if (!date || !time) continue
-                    // Skip any leftover placeholder rows
-                    if (date.toLowerCase().includes('e.g') || time.toLowerCase().includes('e.g')) continue
-                    if (date.toLowerCase().includes('dd/mm') || time.toLowerCase().includes('hh:mm')) continue
-                    const INVALID = ['na', 'n/a', '-', 'none', 'tbd', '']
-                    if (INVALID.includes(pro.toLowerCase()) || INVALID.includes(date.toLowerCase())) continue
-                    slots.push({ professional: pro, date, time })
-                }
-            }
-            console.log(`[Slot Sync] Slots tab: ${slots.length} valid slots loaded`)
-        } else {
-            warnings.push('Slots tab has no data rows — add availability in the Slots tab')
-        }
+        standardSlots = parseSlotRows(slotData.values, 'Slots', false)
+        console.log(`[Slot Sync] Slots tab: ${standardSlots.length} valid slots loaded`)
     } catch (err) {
         errors.push(`Could not read Slots tab: ${err.message}`)
     }
 
-    if (slots.length === 0) {
+    // 3. Priority Slots tab
+    let prioritySlots = []
+    try {
+        const priorityData = await sheetsGet(
+            `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('PrioritySlots')}`,
+            token
+        )
+        prioritySlots = parseSlotRows(priorityData.values, 'PrioritySlots', true)
+        console.log(`[Slot Sync] PrioritySlots tab: ${prioritySlots.length} valid slots loaded`)
+    } catch (err) {
+        // We don't error out the entire sync if the PrioritySlots tab is missing, just warn
+        warnings.push(`PrioritySlots tab read issue (may not exist yet): ${err.message}`)
+    }
+
+    const allSlots = [...standardSlots, ...prioritySlots]
+
+    if (allSlots.length === 0) {
         if (errors.length) console.error('[Slot Sync] ❌ Errors:', errors.join(' | '))
-        console.warn('[Slot Sync] ⚠️  No slots loaded — schedule page will show empty. Add slots to the Slots tab.')
+        console.warn('[Slot Sync] ⚠️  No slots loaded — schedule page will show empty.')
     } else {
-        AvailabilitySlot.loadFromUpload(slots, 'sheets-api')
-        console.log(`[Slot Sync] ✅ ${slots.length} slots live`)
+        AvailabilitySlot.loadFromUpload(allSlots, 'sheets-api')
+        console.log(`[Slot Sync] ✅ ${allSlots.length} slots live (${prioritySlots.length} priority)`)
     }
     if (warnings.length) console.warn('[Slot Sync] ⚠️  Warnings:', warnings.join(' | '))
     return { count: slots.length, errors, warnings, professionals: professionals.length }

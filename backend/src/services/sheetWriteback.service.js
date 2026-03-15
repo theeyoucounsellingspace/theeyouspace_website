@@ -134,9 +134,10 @@ async function getJson(url, token) {
  * @param {string} professional
  * @param {string} date
  * @param {string} time
+ * @param {string} sessionType - 'normal' or 'priority'
  * @returns {Promise<{removed: boolean, reason: string}>}
  */
-async function removeSlotFromSheet(professional, date, time) {
+async function removeSlotFromSheet(professional, date, time, sessionType = 'normal') {
     const sheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
     if (!sheetId) {
         return { removed: false, reason: 'GOOGLE_SHEET_ID not set — skipping write-back' }
@@ -152,8 +153,9 @@ async function removeSlotFromSheet(professional, date, time) {
         return { removed: false, reason: 'Service account not configured — skipping write-back' }
     }
 
-    // 1. Read all values from the sheet
-    const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent('Slots')}`
+    // 1. Read all values from the correct tab
+    const tabName = sessionType === 'priority' ? 'PrioritySlots' : 'Slots'
+    const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabName)}`
     let rows
     try {
         const resp = await getJson(readUrl, token)
@@ -199,16 +201,13 @@ async function removeSlotFromSheet(professional, date, time) {
     }
 
     // 4. Delete the row using batchUpdate
-    // Read the actual sheetId (tab ID) from metadata — don't assume it's 0 or named 'Sheet1'
     const sheetMetaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`
     let gid = 0
-    let tabName = 'Slots'
     try {
         const meta = await getJson(sheetMetaUrl, token)
-        const slotsSheet = (meta?.sheets || []).find(s => s.properties?.title === 'Slots')
-        if (slotsSheet) {
-            gid = slotsSheet.properties.sheetId || 0
-            tabName = slotsSheet.properties.title
+        const targetSheet = (meta?.sheets || []).find(s => s.properties?.title === tabName)
+        if (targetSheet) {
+            gid = targetSheet.properties.sheetId || 0
         }
     } catch (_) { /* use default gid=0 */ }
 
@@ -239,9 +238,9 @@ async function removeSlotFromSheet(professional, date, time) {
 }
 
 /**
- * Restore a cancelled/rescheduled slot back to the 'Slots' tab so others can book it.
+ * Restore a cancelled/rescheduled slot back to its original tab.
  */
-async function restoreSlotToSheet(professional, date, time) {
+async function restoreSlotToSheet(professional, date, time, sessionType = 'normal') {
     const sheetId = (process.env.GOOGLE_SHEET_ID || '').replace(/[^a-zA-Z0-9-_]/g, '')
     if (!sheetId) return { restored: false, reason: 'GOOGLE_SHEET_ID not set' }
 
@@ -250,9 +249,10 @@ async function restoreSlotToSheet(professional, date, time) {
     if (!token) return { restored: false, reason: 'No token' }
 
     try {
+        const tabName = sessionType === 'priority' ? 'PrioritySlots' : 'Slots'
         const payload = [professional || 'General', date, time]
-        await appendRow(sheetId, token, 'Slots', payload)
-        console.log(`[SheetWriteback] ✅ Restored slot to sheet: ${professional} | ${date} | ${time}`)
+        await appendRow(sheetId, token, tabName, payload)
+        console.log(`[SheetWriteback] ✅ Restored slot to ${tabName}: ${professional} | ${date} | ${time}`)
         return { restored: true }
     } catch (err) {
         console.error('[SheetWriteback] ❌ Failed to restore slot to sheet:', err.message)
