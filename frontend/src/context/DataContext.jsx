@@ -21,23 +21,30 @@ export const DataProvider = ({ children }) => {
 
     const refreshData = async () => {
         try {
-            // Fetch in parallel
-            const [slotData, proData] = await Promise.all([
+            const [slotResult, proResult] = await Promise.allSettled([
                 fetchSlots(),
                 fetchProfessionals()
             ]);
 
-            setSlots(slotData);
-            setProfessionals(proData);
-            setLoading(false);
+            if (slotResult.status === 'fulfilled') {
+                setSlots(slotResult.value);
+            } else {
+                console.error('[DataContext] Slots fetch failed:', slotResult.reason);
+                setError(slotResult.reason?.message || 'Failed to sync availability');
+            }
 
-            // Cache professionals for next time (Slots change too fast to cache long-term, but bios are stable)
-            localStorage.setItem('tys_pros_cache', JSON.stringify(proData));
+            if (proResult.status === 'fulfilled') {
+                setProfessionals(proResult.value);
+                localStorage.setItem('tys_pros_cache', JSON.stringify(proResult.value));
+            } else {
+                console.error('[DataContext] Professionals fetch failed:', proResult.reason);
+                // If we have cached pros, we're okay, otherwise we might show names without bios
+            }
         } catch (err) {
-            console.error('[DataContext] Background fetch failed:', err);
-            setError(err.message);
-            // Don't set loading to false if we have no data at all
-            if (!professionals.length) setLoading(false);
+            console.error('[DataContext] Global refresh error:', err);
+            setError('Something went wrong connecting to the space. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 

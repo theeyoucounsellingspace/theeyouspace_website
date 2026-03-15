@@ -115,7 +115,7 @@ function Schedule() {
         </div>
       )}
 
-      {!loading && !error && totalSlots > 0 && (
+      {!dataLoading && !dataError && totalSlots > 0 && (
         <div className="schedule-list">
           {/* Dismissible soft nudge — revealed only when user interacts */}
           {!nudgeDismissed && (

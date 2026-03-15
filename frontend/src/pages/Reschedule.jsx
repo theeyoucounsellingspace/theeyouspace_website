@@ -41,7 +41,10 @@ function Reschedule() {
             if (!res.ok) {
                 if (res.status === 403) { setEmailErr('Email does not match this booking. Please check and try again.'); return }
                 if (res.status === 404) { setStep(STEPS.ERROR); setServerError('Booking not found.'); return }
-                setEmailErr(data.error || data.reason || 'Something went wrong. Please try again.')
+                
+                // Extract best error message
+                const msg = data.error || data.reason || (data.errors && data.errors[0]?.msg) || 'Something went wrong. Please try again.'
+                setEmailErr(msg)
                 return
             }
             if (!data.eligible) {
