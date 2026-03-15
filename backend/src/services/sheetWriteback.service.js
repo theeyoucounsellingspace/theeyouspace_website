@@ -327,7 +327,7 @@ async function restoreBookingsFromSheet() {
                 phone: (row[C.phone] || '').trim() || null,
                 selectedSlot: { date, time, professional },
                 sessionType: rawType.includes('priority') ? 'priority' : 'normal',
-                paymentStatus: 'paid',
+                paymentStatus: 'success',
                 bookingStatus: statusInSheet.toLowerCase() === 'rescheduled' ? 'rescheduled' : 'confirmed',
                 createdAt: (row[C.confirmedAt] || new Date().toISOString()),
             })
@@ -360,40 +360,37 @@ async function updateBookingStatusInSheet(bookingId, professional, date, time, n
 
     try {
         const tabName = (professional || 'Unknown').replace(/[\[\]:*?/\\]/g, '').trim().slice(0, 95)
+        const tabsToUpdate = [
+            { name: tabName, idCol: 0, statusColChar: 'M' }, // Professional Tab (Booking ID in Col A, Status in Col M)
+            { name: 'All Bookings', idCol: 1, statusColChar: 'N' } // Aggregate Tab (Booking ID in Col B, Status in Col N)
+        ]
 
-        // Read the professional's tab
-        const data = await getJson(
-            `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabName)}`,
-            token
-        )
-        const rows = data.values || []
-        if (rows.length < 2) return
+        await Promise.allSettled(tabsToUpdate.map(async (tabInfo) => {
+            const data = await getJson(
+                `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabInfo.name)}`,
+                token
+            )
+            const rows = data.values || []
+            if (rows.length < 2) return
 
-        // Column A = Booking ID, Column M (index 12) = Status
-        const BOOKING_ID_COL = 0
-        const STATUS_COL = 12
-
-        let targetRow = -1
-        for (let i = 1; i < rows.length; i++) {
-            if ((rows[i][BOOKING_ID_COL] || '').trim() === bookingId) {
-                targetRow = i + 1 // 1-indexed for Sheets API
-                break
+            let targetRow = -1
+            for (let i = 1; i < rows.length; i++) {
+                if ((rows[i][tabInfo.idCol] || '').trim() === bookingId) {
+                    targetRow = i + 1 // 1-indexed for Sheets API
+                    break
+                }
             }
-        }
 
-        if (targetRow === -1) {
-            console.warn(`[SheetWriteback] updateStatus: booking ${bookingId} not found in tab "${tabName}"`)
-            return
-        }
-
-        // Write new status to column M of that row
-        const range = `${tabName}!M${targetRow}`
-        await putJson(
-            `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`,
-            token,
-            { range, majorDimension: 'ROWS', values: [[newStatus]] }
-        )
-        console.log(`[SheetWriteback] ✅ Status updated to "${newStatus}" for booking ${bookingId} in tab "${tabName}"`)
+            if (targetRow !== -1) {
+                const range = `${tabInfo.name}!${tabInfo.statusColChar}${targetRow}`
+                await putJson(
+                    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`,
+                    token,
+                    { range, majorDimension: 'ROWS', values: [[newStatus]] }
+                )
+                console.log(`[SheetWriteback] ✅ Status updated to "${newStatus}" for booking ${bookingId} in tab "${tabInfo.name}"`)
+            }
+        }))
     } catch (err) {
         console.error('[SheetWriteback] updateStatus failed:', err.message)
     }
